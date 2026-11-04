@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de asistencia escolar</title>
+</head>
+<body>
+
+    <h1>Control de asistencia escolar</h1>
+
+    <h2>Registrar alumno</h2>
+
+    <form action="/registrar" method="POST">
+
+        <label>Matrícula:</label>
+        <input type="text" name="matricula" required>
+
+        <br><br>
+
+        <label>Nombre del alumno:</label>
+        <input type="text" name="alumno" required>
+
+        <br><br>
+
+        <label>Nombre del tutor:</label>
+        <input type="text" name="tutor" required>
+
+        <br><br>
+
+        <label>INE del tutor:</label>
+        <input type="text" name="ine" maxlength="40" required>
+
+        <br><br>
+
+        <label>Teléfono:</label>
+        <input type="text" name="telefono">
+
+        <br><br>
+
+        <button type="submit">Registrar alumno</button>
+
+    </form>
+
+</body>
+</html>
