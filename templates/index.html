@@ -1,46 +1,305 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de asistencia escolar</title>
+
+    <title>Registro de alumnos y tutores</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
 
-    <h1>Control de asistencia escolar</h1>
+    <main class="contenedor">
 
-    <h2>Registrar alumno</h2>
+        <header class="encabezado">
+            <h1>Registro escolar</h1>
+            <p>Registro de alumnos y vinculación de tutores</p>
+        </header>
 
-    <form action="/registrar" method="POST">
+        {% if exito %}
+            <div class="mensaje-exito">
+                {{ exito }}
+            </div>
+        {% endif %}
 
-        <label>Matrícula:</label>
-        <input type="text" name="matricula" required>
+        {% if errores.get('general') %}
+        <div class="mensaje-error-general">
+            <strong>No se pudo completar el registro.</strong>
+            <p>{{ errores.get('general') }}</p>
+        </div>
+    {% endif %}
 
-        <br><br>
+        <form action="{{ url_for('registrar') }}"
+              method="POST"
+              id="formularioRegistro"
+              novalidate>
 
-        <label>Nombre del alumno:</label>
-        <input type="text" name="alumno" required>
+            <section class="seccion-formulario">
 
-        <br><br>
+                <h2>Datos del alumno</h2>
 
-        <label>Nombre del tutor:</label>
-        <input type="text" name="tutor" required>
+                <div class="grupo-campo">
+                    <label for="matricula">Matrícula</label>
 
-        <br><br>
+                    <input
+                        type="text"
+                        id="matricula"
+                        name="matricula"
+                        placeholder="Ejemplo: 20252DSM010"
+                        value="{{ valores.get('matricula', '') }}"
+                        required
+                    >
 
-        <label>INE del tutor:</label>
-        <input type="text" name="ine" maxlength="40" required>
+                    <small class="error-campo" id="error-matricula">
+                        {{ errores.get('matricula', '') }}
+                    </small>
+                </div>
 
-        <br><br>
+                <div class="grupo-campo">
+                    <label for="alumno">Nombre completo del alumno</label>
 
-        <label>Teléfono:</label>
-        <input type="text" name="telefono">
+                    <input
+                        type="text"
+                        id="alumno"
+                        name="alumno"
+                        placeholder="Ejemplo: José Luis Pérez"
+                        value="{{ valores.get('alumno', '') }}"
+                        required
+                    >
 
-        <br><br>
+                    <small class="error-campo" id="error-alumno">
+                        {{ errores.get('alumno', '') }}
+                    </small>
+                </div>
 
-        <button type="submit">Registrar alumno</button>
+            </section>
 
-    </form>
+            <section class="seccion-formulario">
+
+                <h2>Datos del tutor</h2>
+
+                <div class="grupo-campo">
+                    <label for="tutor">Nombre completo del tutor</label>
+
+                    <input
+                        type="text"
+                        id="tutor"
+                        name="tutor"
+                        placeholder="Ejemplo: María López García"
+                        value="{{ valores.get('tutor', '') }}"
+                        required
+                    >
+
+                    <small class="error-campo" id="error-tutor">
+                        {{ errores.get('tutor', '') }}
+                    </small>
+                </div>
+
+                <div class="grupo-campo">
+                    <label for="ine">Clave de elector de la INE</label>
+
+                    <input
+                        type="text"
+                        id="ine"
+                        name="ine"
+                        placeholder="18 caracteres alfanuméricos"
+                        maxlength="18"
+                        autocomplete="off"
+                        required
+                    >
+
+                    <small class="ayuda">
+                        Escribe la clave de elector de 18 caracteres,
+                        no el OCR ni el número de emisión.
+                    </small>
+
+                    <small class="error-campo" id="error-ine">
+                        {{ errores.get('ine', '') }}
+                    </small>
+                </div>
+
+                <div class="grupo-campo">
+                    <label for="telefono">Número telefónico</label>
+
+                    <input
+                        type="tel"
+                        id="telefono"
+                        name="telefono"
+                        placeholder="Ejemplo: 2461234567"
+                        maxlength="10"
+                        inputmode="numeric"
+                        value="{{ valores.get('telefono', '') }}"
+                        required
+                    >
+
+                    <small class="ayuda">
+                        Debe contener exactamente 10 números.
+                    </small>
+
+                    <small class="error-campo" id="error-telefono">
+                        {{ errores.get('telefono', '') }}
+                    </small>
+                </div>
+
+                <div class="grupo-campo">
+                    <label for="correo">Correo electrónico (opcional)</label>
+
+                    <input
+                        type="email"
+                        id="correo"
+                        name="correo"
+                        placeholder="Ejemplo: usuario@gmail.com"
+                        value="{{ valores.get('correo', '') }}"
+                    >
+
+                    <small class="error-campo" id="error-correo">
+                        {{ errores.get('correo', '') }}
+                    </small>
+                </div>
+
+            </section>
+
+            <button type="submit" class="btn-registrar">
+                Registrar alumno y tutor
+            </button>
+
+        </form>
+
+        {% if enlace %}
+            <section class="resultado-enlace">
+                <h2>Vincular Telegram</h2>
+
+                <p>
+                    El registro se realizó correctamente.
+                    Comparte este enlace con el tutor para vincular Telegram:
+                </p>
+
+                <a href="{{ enlace }}" target="_blank" class="btn-telegram">
+                    Vincular Telegram
+                </a>
+            </section>
+        {% endif %}
+
+    </main>
+
+    <script>
+        const campos = {
+            matricula: document.getElementById("matricula"),
+            alumno: document.getElementById("alumno"),
+            tutor: document.getElementById("tutor"),
+            ine: document.getElementById("ine"),
+            telefono: document.getElementById("telefono"),
+            correo: document.getElementById("correo")
+        };
+
+        function validarCampo(nombre) {
+            const campo = campos[nombre];
+            const mensaje = document.getElementById("error-" + nombre);
+
+            const valor = campo.value.trim();
+
+            let error = "";
+
+            const patronNombre =
+                /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:[ '-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/;
+
+            switch (nombre) {
+
+                case "matricula":
+                    if (!valor) {
+                        error = "Ingresa la matrícula asignada por la institución.";
+                    }
+                    break;
+
+                case "alumno":
+                    if (!valor) {
+                        error = "Ingresa el nombre completo del alumno.";
+                    } else if (!patronNombre.test(valor)) {
+                        error = "Utiliza solamente letras, espacios, acentos, guiones o apóstrofes. Ejemplo: José Luis Pérez.";
+                    }
+                    break;
+
+                case "tutor":
+                    if (!valor) {
+                        error = "Ingresa el nombre completo del tutor.";
+                    } else if (!patronNombre.test(valor)) {
+                        error = "Utiliza solamente letras, espacios, acentos, guiones o apóstrofes. Ejemplo: María López García.";
+                    }
+                    break;
+
+                case "ine":
+                    if (!valor) {
+                        error = "Ingresa la clave de elector de la INE.";
+                    } else if (!/^[A-Za-z0-9]{18}$/.test(valor)) {
+                        error = "Debe tener exactamente 18 caracteres, únicamente letras y números.";
+                    }
+                    break;
+
+                case "telefono":
+                    if (!valor) {
+                        error = "Ingresa el número telefónico del tutor.";
+                    } else if (!/^[0-9]{10}$/.test(valor)) {
+                        error = "Escribe exactamente 10 números, sin espacios ni guiones. Ejemplo: 2461234567.";
+                    }
+                    break;
+
+                case "correo":
+                    if (valor && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(valor)) {
+                        error = "Escribe un correo válido. Ejemplo: usuario@gmail.com.";
+                    }
+                    break;
+            }
+
+            mensaje.textContent = error;
+
+            if (error) {
+                campo.classList.add("campo-invalido");
+                campo.classList.remove("campo-valido");
+            } else {
+                campo.classList.remove("campo-invalido");
+
+                if (valor) {
+                    campo.classList.add("campo-valido");
+                } else {
+                    campo.classList.remove("campo-valido");
+                }
+            }
+
+            return error === "";
+        }
+
+        Object.keys(campos).forEach(nombre => {
+            const campo = campos[nombre];
+
+            campo.addEventListener("input", () => {
+                validarCampo(nombre);
+            });
+
+            campo.addEventListener("blur", () => {
+                validarCampo(nombre);
+            });
+        });
+
+        document.getElementById("formularioRegistro")
+            .addEventListener("submit", function(event) {
+
+                let formularioValido = true;
+
+                Object.keys(campos).forEach(nombre => {
+                    if (!validarCampo(nombre)) {
+                        formularioValido = false;
+                    }
+                });
+
+                if (!formularioValido) {
+                    event.preventDefault();
+                }
+            });
+    </script>
 
 </body>
 </html>
