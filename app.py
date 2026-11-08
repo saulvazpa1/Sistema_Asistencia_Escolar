@@ -1,4 +1,5 @@
 
+
 from flask import Flask, request, render_template
 import psycopg
 
@@ -6,13 +7,20 @@ from models.alumno import Alumno
 from models.tutor import Tutor
 from services.registro_service import RegistroService
 from services.validaciones import validar_registro
-
+from routes.admin import admin_bp
 
 app = Flask(__name__)
-
+app.secret_key = "Escuela-Asistencia-2026-x7Kq9Lm2Zp4Rt8"
 registro_service = RegistroService()
 
+# Registrar las rutas del panel administrador
+app.register_blueprint(admin_bp)
 
+print("\n===== RUTAS DEL ADMIN =====")
+for ruta in app.url_map.iter_rules():
+    if "admin" in ruta.endpoint:
+        print(ruta.endpoint, "->", ruta.rule)
+print("===========================\n")
 
 def normalizar_errores(errores):
     """
@@ -55,6 +63,8 @@ def registrar():
     errores, datos = validar_registro(datos)
 
     errores = normalizar_errores(errores)
+    print("DATOS LIMPIOS:", datos)
+    print("ERRORES DE VALIDACIÓN:", errores)
 
     # Si existen errores, regresar al formulario
     if errores:
@@ -72,9 +82,14 @@ def registrar():
         
 
         alumno = Alumno(
-            alumno_matricula=datos["matricula"],
-            alumno_nombre=datos["alumno"]
-        )
+    alumno_matricula=datos["matricula"],
+    alumno_nombre=datos["alumno"],
+    alumno_curp=datos["curp"],
+   
+    alumno_grado=datos["grado"],
+    alumno_grupo=datos["grupo"],
+    alumno_especialidad=datos["especialidad"] or None
+)
 
    
         tutor = Tutor(
@@ -173,8 +188,9 @@ def registrar():
 
 
 if __name__ == "__main__":
-
     app.run(
+        host="127.0.0.1",
+        port=5001,
         debug=True,
         use_reloader=False
     )

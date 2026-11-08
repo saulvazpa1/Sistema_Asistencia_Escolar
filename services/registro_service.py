@@ -1,3 +1,4 @@
+
 import secrets
 import hashlib
 
@@ -18,22 +19,28 @@ class RegistroService:
                         INSERT INTO alumnos (
                             alumno_matricula,
                             alumno_nombre,
+                            alumno_curp,
                             alumno_carrera_id,
-                            alumno_grupo_id
+                            alumno_grado,
+                            alumno_grupo,
+                            alumno_especialidad
                         )
-                        VALUES (%s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
                         RETURNING alumno_id
                     """, (
                         alumno.alumno_matricula,
                         alumno.alumno_nombre,
+                        alumno.alumno_curp,
                         alumno.alumno_carrera_id,
-                        alumno.alumno_grupo_id
+                        alumno.alumno_grado,
+                        alumno.alumno_grupo,
+                        alumno.alumno_especialidad
                     ))
 
                     return cursor.fetchone()[0]
 
         except Exception as error:
-            print("Error al registrar alumno:", error)
+            print("Error al registrar alumno:", repr(error))
             raise
 
     # Registrar tutor
@@ -62,7 +69,7 @@ class RegistroService:
                     return cursor.fetchone()[0]
 
         except Exception as error:
-            print("Error al registrar tutor:", error)
+            print("Error al registrar tutor:", repr(error))
             raise
 
     # Relacionar alumno con tutor
@@ -96,7 +103,7 @@ class RegistroService:
                     return True
 
         except Exception as error:
-            print("Error al relacionar alumno y tutor:", error)
+            print("Error al relacionar alumno y tutor:", repr(error))
             raise
 
     # Generar enlace de Telegram
@@ -135,5 +142,5 @@ class RegistroService:
             return f"https://t.me/{BOT_USERNAME}?start=link_{codigo}"
 
         except Exception as error:
-            print("Error al generar enlace de Telegram:", error)
+            print("Error al generar enlace de Telegram:", repr(error))
             raise
