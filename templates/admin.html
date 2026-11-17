@@ -1,0 +1,672 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel administrador | Sistema Escolar</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+{% with mensajes = get_flashed_messages(with_categories=true) %}
+  {% if mensajes %}
+  <div class="toast-container">
+    {% for categoria, mensaje in mensajes %}
+      <div class="toast toast-{{ categoria }}">
+        <i class="fa-solid {{ 'fa-circle-check' if categoria == 'success' else 'fa-circle-exclamation' }}"></i>
+        <span>{{ mensaje }}</span>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+<body class="admin-body">
+
+
+    <aside class="sidebar">
+
+        <div class="sidebar-brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div>
+                <h2>Sistema Escolar</h2>
+                <span>Administración</span>
+            </div>
+        </div>
+
+        <div class="sidebar-section">MENÚ PRINCIPAL</div>
+
+        <nav class="sidebar-nav">
+
+            <a href="#inicio" class="nav-link active">
+                <i class="fa-solid fa-house"></i>
+                <span>Inicio</span>
+            </a>
+
+            <a href="#alumnos" class="nav-link">
+                <i class="fa-solid fa-user-graduate"></i>
+                <span>Alumnos y tutores</span>
+            </a>
+
+            <a href="#nfc" class="nav-link disabled-link">
+                <i class="fa-solid fa-address-card"></i>
+                <span>Asistencia NFC</span>
+                <small>Después</small>
+            </a>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="admin-profile">
+                <div class="profile-avatar">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div>
+                    <strong>Administrador</strong>
+                    <span>Panel de control</span>
+                </div>
+            </div>
+        </div>
+
+    </aside>
+
+
+    <main class="admin-main">
+
+      
+        <header class="topbar">
+            <div>
+                <h1>Panel de administración</h1>
+                <p>Resumen general del sistema escolar</p>
+            </div>
+
+            <div class="topbar-date">
+                <i class="fa-regular fa-calendar"></i>
+                Sistema de asistencia
+            </div>
+        </header>
+
+
+
+        <section id="inicio" class="dashboard-section">
+
+            <div class="welcome-heading">
+                <div>
+                    <h2>Bienvenido al panel</h2>
+                    <p>Consulta y administra la información de alumnos y tutores.</p>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+
+                <article class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fa-solid fa-user-graduate"></i>
+                    </div>
+                    <div>
+                        <p>Total de alumnos</p>
+                        <h3>{{ total_alumnos }}</h3>
+                        <span>Alumnos registrados</span>
+                    </div>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <p>Total de tutores</p>
+                        <h3>{{ total_tutores }}</h3>
+                        <span>Tutores registrados</span>
+                    </div>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="fa-brands fa-telegram"></i>
+                    </div>
+                    <div>
+                        <p>Telegram vinculados</p>
+                        <h3>{{ tutores_vinculados }}</h3>
+                        <span>Tutores conectados</span>
+                    </div>
+                </article>
+
+                <article class="stat-card">
+                    <div class="stat-icon orange">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+                    <div>
+                        <p>Alumnos activos</p>
+                        <h3>{{ alumnos_activos }}</h3>
+                        <span>Con estatus activo</span>
+                    </div>
+                </article>
+
+            </div>
+        </section>
+
+
+    
+        
+<section id="alumnos" class="content-section">
+
+  
+    <div class="section-heading">
+        <div>
+            <h2>Alumnos registrados</h2>
+            <p>Consulta y administra la información de los alumnos.</p>
+        </div>
+        <span class="section-count">
+            {{ alumnos|length }} registros
+        </span>
+    </div>
+
+    <div class="table-tools">
+        <input
+            type="text"
+            id="buscarAlumno"
+            placeholder="Buscar por matrícula o nombre..."
+            oninput="filtrarAlumnos()"
+        >
+
+        <select id="filtroAlumno" onchange="filtrarAlumnos()">
+            <option value="">Todos los alumnos</option>
+            <option value="Activo">Activos</option>
+            <option value="Baja">Dados de baja</option>
+        </select>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Matrícula</th>
+                    <th>Alumno</th>
+                    <th>CURP</th>
+                    <th>Grado</th>
+                    <th>Grupo</th>
+                    <th>Especialidad</th>
+                    <th>Tutor principal</th>
+                    <th>Telegram</th>
+                    <th>Estatus</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody id="tablaAlumnos">
+                {% for alumno in alumnos %}
+               <tr data-estatus="{{ (alumno.alumno_estatus or '')|lower }}">
+                    <td>{{ alumno.alumno_matricula }}</td>
+                    <td>{{ alumno.alumno_nombre }}</td>
+                    <td>{{ alumno.alumno_curp or '-' }}</td>
+                    <td>{{ alumno.alumno_grado or '-' }}</td>
+                    <td>{{ alumno.alumno_grupo or '-' }}</td>
+                    <td>{{ alumno.alumno_especialidad or '-' }}</td>
+                    <td>{{ alumno.tutor_nombre or 'Sin tutor' }}</td>
+                    <td>{{ alumno.telegram_estado or 'Pendiente' }}</td>
+                    <td>{{ (alumno.alumno_estatus or '')|capitalize }}</td>
+
+                    <td>
+                        <button
+                            type="button"
+                            class="btn-editar"
+                            data-id="{{ alumno.alumno_id }}"
+                            data-matricula="{{ alumno.alumno_matricula }}"
+                            data-nombre="{{ alumno.alumno_nombre }}"
+                            data-curp="{{ alumno.alumno_curp or '' }}"
+                            data-grado="{{ alumno.alumno_grado or '' }}"
+                            data-grupo="{{ alumno.alumno_grupo or '' }}"
+                            data-especialidad="{{ alumno.alumno_especialidad or '' }}"
+                            onclick="abrirModalAlumno(this)"
+                        >
+                            <i class="fa-solid fa-pen"></i>
+                            Editar
+                        </button>
+
+            {% if 'activo' in (alumno.alumno_estatus or '')|lower %}
+<form method="POST"
+      action="{{ url_for('admin.dar_baja_alumno', alumno_id=alumno.alumno_id) }}"
+      class="form-baja"
+      data-tipo="alumno"
+      data-nombre="{{ alumno.alumno_nombre }}">
+    <input type="hidden" name="motivo" value="">
+    <button type="submit" class="btn-baja">
+        <i class="fa-solid fa-user-minus"></i> Dar de baja
+    </button>
+</form>
+{% else %}
+<form method="POST"
+      action="{{ url_for('admin.dar_alta_alumno', alumno_id=alumno.alumno_id) }}"
+      class="form-alta"
+      data-nombre="{{ alumno.alumno_nombre }}">
+    <button type="submit" class="btn-alta">
+        <i class="fa-solid fa-user-plus"></i> Dar de alta
+    </button>
+</form>
+{% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section-heading tutors-heading">
+        <div>
+            <h2>Tutores registrados</h2>
+            <p>Datos de contacto y estado de vinculación con Telegram.</p>
+        </div>
+
+        <span class="section-count">
+            {{ tutores|length }} registros
+        </span>
+    </div>
+
+    <div class="table-tools">
+        <input
+            type="text"
+            id="buscarTutor"
+            placeholder="Buscar tutor por nombre..."
+            oninput="filtrarTutores()"
+        >
+
+        <select id="filtroTutor" onchange="filtrarTutores()">
+            <option value="">Todos los tutores</option>
+            <option value="vinculado">Telegram vinculado</option>
+            <option value="pendiente">Telegram pendiente</option>
+        </select>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre del tutor</th>
+                    <th>Teléfono</th>
+                    <th>Correo electrónico</th>
+                    <th>Telegram</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody id="tablaTutores">
+                {% for tutor in tutores %}
+                <tr data-telegram="{% if tutor.telegram_estado == 'Vinculado' %}vinculado{% else %}pendiente{% endif %}">
+                    <td>{{ tutor.tutor_nombre }}</td>
+                    <td>{{ tutor.tutor_telefono or '-' }}</td>
+                    <td>{{ tutor.tutor_correo or '-' }}</td>
+                    <td>{{ tutor.telegram_estado or 'Pendiente' }}</td>
+
+                    <td>
+                        {% if tutor.tutor_activo %}
+                            <span class="status-badge active-status">Activo</span>
+                        {% else %}
+                            <span class="status-badge inactive-status">Inactivo</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <button
+                            type="button"
+                            class="btn-editar"
+                            data-id="{{ tutor.tutor_id }}"
+                            data-nombre="{{ tutor.tutor_nombre }}"
+                            data-ine="{{ tutor.tutor_ine or '' }}"
+                            data-telefono="{{ tutor.tutor_telefono or '' }}"
+                            data-correo="{{ tutor.tutor_correo or '' }}"
+                            onclick="abrirModalTutor(this)"
+                        >
+                            <i class="fa-solid fa-pen"></i>
+                            Editar
+                        </button>
+
+                        {% if tutor.tutor_activo %}
+                        <form method="POST"
+      action="{{ url_for('admin.dar_baja_tutor', tutor_id=tutor.tutor_id) }}"
+      class="form-baja"
+      data-tipo="tutor"
+      data-nombre="{{ tutor.tutor_nombre }}">
+    <button type="submit" class="btn-baja">
+        <i class="fa-solid fa-user-minus"></i> Dar de baja
+    </button>
+</form>
+                        {% else %}
+<form method="POST"
+      action="{{ url_for('admin.dar_alta_tutor', tutor_id=tutor.tutor_id) }}"
+      class="form-alta"
+      data-nombre="{{ tutor.tutor_nombre }}">
+    <button type="submit" class="btn-alta">
+        <i class="fa-solid fa-user-plus"></i> Dar de alta
+    </button>
+</form>
+{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</section>
+
+       
+        <section id="nfc" class="content-section nfc-placeholder">
+
+            <div class="nfc-icon">
+                <i class="fa-solid fa-address-card"></i>
+            </div>
+
+            <div>
+                <h2>Registro de asistencia NFC</h2>
+
+                <p>
+                    Este apartado se habilitará cuando se integre el lector NFC
+                    y comience a enviar registros a la base de datos.
+                </p>
+
+                <span class="status-badge pending">
+                    Pendiente de integración
+                </span>
+            </div>
+
+        </section>
+
+
+       
+        <footer class="admin-footer">
+            Sistema de Administración Escolar
+        </footer>
+
+    </main>
+
+
+   
+    <div id="modalAlumno" class="modal-edicion" style="display:none;">
+
+        <div class="modal-contenido">
+
+            <h2>Editar alumno</h2>
+
+            <form id="formEditarAlumno" method="POST">
+
+                <label>Matrícula</label>
+<input type="text" name="matricula" id="editarMatricula" maxlength="30" required>
+
+<label>Nombre del alumno</label>
+<input type="text" name="nombre" id="editarNombreAlumno" maxlength="180" required
+       pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+([ '\-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*"
+       title="Solo letras, espacios, apóstrofes y guiones">
+
+<label>CURP</label>
+<input type="text" name="curp" id="editarCurp" maxlength="18" minlength="18" required
+       pattern="[A-Za-z0-9]{18}" title="Exactamente 18 caracteres, letras y números">
+
+<label>Grado</label>
+<input type="number" name="grado" id="editarGrado" min="1" max="25" required>
+
+<label>Grupo</label>
+<input type="text" name="grupo" id="editarGrupo" maxlength="10" required
+       pattern="[A-Za-z0-9]{1,10}" title="Letras y números, máximo 10 caracteres">
+
+<label>Especialidad</label>
+<input type="text" name="especialidad" id="editarEspecialidad" maxlength="100">
+                <div class="modal-botones">
+
+                    <button type="submit" class="btn-guardar">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        Guardar cambios
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-cancelar"
+                        onclick="cerrarModal('modalAlumno')"
+                    >
+                        Cancelar
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+   
+    <div id="modalTutor" class="modal-edicion" style="display:none;">
+
+        <div class="modal-contenido">
+
+            <h2>Editar tutor</h2>
+
+            <form id="formEditarTutor" method="POST">
+
+               <label>Nombre del tutor</label>
+<input type="text" name="nombre" id="editarNombreTutor" maxlength="180" required
+       pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+([ '\-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*"
+       title="Solo letras, espacios, apóstrofes y guiones">
+
+<label>INE</label>
+<input type="text" name="ine" id="editarIne" maxlength="18" minlength="18" required
+       pattern="[A-Za-z0-9]{18}" title="Exactamente 18 caracteres, letras y números">
+
+<label>Teléfono</label>
+<input type="text" name="telefono" id="editarTelefono" maxlength="10" required
+       inputmode="numeric" pattern="[0-9]{10}" title="Exactamente 10 dígitos">
+
+<label>Correo electrónico</label>
+<input type="email" name="correo" id="editarCorreo" maxlength="180">
+
+                <div class="modal-botones">
+
+                    <button type="submit" class="btn-guardar">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        Guardar cambios
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-cancelar"
+                        onclick="cerrarModal('modalTutor')"
+                    >
+                        Cancelar
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <div id="modalConfirmar" class="modal-edicion" style="display:none;">
+    <div class="modal-contenido">
+        <h2 id="confirmarTitulo"></h2>
+        <p id="confirmarTexto"></p>
+
+        <div id="confirmarMotivoBox" style="display:none;">
+            <label>Motivo de la baja</label>
+            <textarea id="confirmarMotivo" rows="3" maxlength="300"></textarea>
+            <small id="confirmarError" style="color:#dc2626; display:none;">
+                Debes escribir el motivo.
+            </small>
+        </div>
+
+        <div class="modal-botones">
+            <button type="button" class="btn-baja" id="confirmarAceptar">
+                <i class="fa-solid fa-user-minus"></i> Confirmar baja
+            </button>
+            <button type="button" class="btn-cancelar" onclick="cerrarModal('modalConfirmar')">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+
+   
+    
+<script>
+    // CURP e INE en mayúsculas, solo letras y números
+["editarCurp", "editarIne"].forEach(id => {
+    document.getElementById(id).addEventListener("input", function () {
+        this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    });
+});
+
+// Grupo en mayúsculas, solo letras y números
+document.getElementById("editarGrupo").addEventListener("input", function () {
+    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+});
+
+// Teléfono: solo dígitos
+document.getElementById("editarTelefono").addEventListener("input", function () {
+    this.value = this.value.replace(/\D/g, "");
+});
+
+    // BUSCAR Y FILTRAR ALUMNOS
+    function filtrarAlumnos() {
+
+        const texto = document.getElementById("buscarAlumno").value.toLowerCase();
+        const filtro = document.getElementById("filtroAlumno").value;
+
+        const filas = document.querySelectorAll("#tablaAlumnos tr");
+
+        filas.forEach(fila => {
+
+            const contenido = fila.textContent.toLowerCase();
+           const estatus = (fila.dataset.estatus || "").toLowerCase();
+
+            const coincideTexto = contenido.includes(texto);
+            const coincideFiltro = !filtro || estatus === filtro;
+
+            fila.style.display =
+                coincideTexto && coincideFiltro ? "" : "none";
+        });
+    }
+
+
+    // BUSCAR Y FILTRAR TUTORES
+    function filtrarTutores() {
+
+        const texto = document.getElementById("buscarTutor").value.toLowerCase();
+        const filtro = document.getElementById("filtroTutor").value;
+
+        const filas = document.querySelectorAll("#tablaTutores tr");
+
+        filas.forEach(fila => {
+
+            const contenido = fila.textContent.toLowerCase();
+            const telegram = fila.dataset.telegram;
+
+            const coincideTexto = contenido.includes(texto);
+            const coincideFiltro = !filtro || telegram === filtro;
+
+            fila.style.display =
+                coincideTexto && coincideFiltro ? "" : "none";
+        });
+    }
+
+
+    // ABRIR MODAL PARA EDITAR ALUMNO
+    function abrirModalAlumno(boton) {
+
+        const id = boton.dataset.id;
+
+        document.getElementById("formEditarAlumno").action =
+            `/admin/alumno/${id}/editar`;
+
+        document.getElementById("editarMatricula").value = boton.dataset.matricula;
+        document.getElementById("editarNombreAlumno").value = boton.dataset.nombre;
+        document.getElementById("editarCurp").value = boton.dataset.curp;
+        document.getElementById("editarGrado").value = boton.dataset.grado;
+        document.getElementById("editarGrupo").value = boton.dataset.grupo;
+        document.getElementById("editarEspecialidad").value = boton.dataset.especialidad;
+
+        document.getElementById("modalAlumno").style.display = "flex";
+    }
+
+
+    // ABRIR MODAL PARA EDITAR TUTOR
+    function abrirModalTutor(boton) {
+
+        const id = boton.dataset.id;
+
+        document.getElementById("formEditarTutor").action =
+            `/admin/tutor/${id}/editar`;
+
+        document.getElementById("editarNombreTutor").value = boton.dataset.nombre;
+        document.getElementById("editarIne").value = boton.dataset.ine;
+        document.getElementById("editarTelefono").value = boton.dataset.telefono;
+        document.getElementById("editarCorreo").value = boton.dataset.correo;
+
+        document.getElementById("modalTutor").style.display = "flex";
+    }
+
+
+    // CERRAR MODALES
+    function cerrarModal(id) {
+        document.getElementById(id).style.display = "none";
+    }
+
+
+    // CONVERTIR GRUPO A MAYÚSCULAS
+    document.getElementById("editarGrupo").addEventListener("input", function() {
+        this.value = this.value.toUpperCase();
+    });
+
+
+    // CONFIRMACIÓN DE BAJA (alumno y tutor)
+document.querySelectorAll(".form-baja").forEach(form => {
+    form.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const esAlumno = form.dataset.tipo === "alumno";
+        const nombre = form.dataset.nombre;
+
+        document.getElementById("confirmarTitulo").textContent =
+            esAlumno ? "Dar de baja alumno" : "Dar de baja tutor";
+        document.getElementById("confirmarTexto").textContent =
+            `¿Seguro que deseas dar de baja a ${nombre}?`;
+        document.getElementById("confirmarMotivoBox").style.display =
+            esAlumno ? "block" : "none";
+        document.getElementById("confirmarMotivo").value = "";
+        document.getElementById("confirmarError").style.display = "none";
+
+        document.getElementById("confirmarAceptar").onclick = function () {
+            if (esAlumno) {
+                const motivo = document.getElementById("confirmarMotivo").value.trim();
+                if (!motivo) {
+                    document.getElementById("confirmarError").style.display = "block";
+                    return;
+                }
+                form.querySelector('input[name="motivo"]').value = motivo;
+            }
+            form.submit();
+        };
+
+        document.getElementById("modalConfirmar").style.display = "flex";
+    });
+});
+
+// OCULTAR TOASTS
+setTimeout(() => {
+    document.querySelectorAll(".toast").forEach(t => {
+        t.style.opacity = "0";
+        setTimeout(() => t.remove(), 400);
+    });
+}, 4000);
+
+</script>
+</body>
+</html>
+
+

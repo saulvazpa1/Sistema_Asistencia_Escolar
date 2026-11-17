@@ -3,44 +3,507 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de asistencia escolar</title>
+
+    <title>Registro de alumnos y tutores</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
 
-    <h1>Control de asistencia escolar</h1>
+    <main class="contenedor">
 
-    <h2>Registrar alumno</h2>
+        <header class="encabezado">
+            <h1>Registro escolar</h1>
+            <p>Registro de alumnos y vinculación de tutores</p>
+        </header>
 
-    <form action="/registrar" method="POST">
+        {% if exito %}
+            <div class="mensaje-exito">
+                {{ exito }}
+            </div>
+        {% endif %}
 
-        <label>Matrícula:</label>
-        <input type="text" name="matricula" required>
+        {% if errores.get('general') %}
+            <div class="mensaje-error-general">
+                <strong>No se pudo completar el registro.</strong>
+                <p>{{ errores.get('general') }}</p>
+            </div>
+        {% endif %}
 
-        <br><br>
+        <form action="{{ url_for('registrar') }}"
+              method="POST"
+              id="formularioRegistro"
+              novalidate>
 
-        <label>Nombre del alumno:</label>
-        <input type="text" name="alumno" required>
+            <section class="seccion-formulario">
 
-        <br><br>
+                <h2>Datos del alumno</h2>
 
-        <label>Nombre del tutor:</label>
-        <input type="text" name="tutor" required>
+                <div class="grupo-campo">
+                    <label for="matricula">Matrícula</label>
+                    <input
+                        type="text"
+                        id="matricula"
+                        name="matricula"
+                        maxlength="20"
+                        placeholder="Ejemplo: 20252DSM010"
+                        value="{{ valores.get('matricula', '') }}"
+                        required
+                    >
+                    <small class="error-campo" id="error-matricula">
+                        {{ errores.get('matricula', '') }}
+                    </small>
+                </div>
 
-        <br><br>
+                <div class="grupo-campo">
+                    <label for="alumno">Nombre completo del alumno</label>
+                    <input
+                        type="text"
+                        id="alumno"
+                        name="alumno"
+                        maxlength="100"
+                        placeholder="Ejemplo: José Luis Pérez"
+                        value="{{ valores.get('alumno', '') }}"
+                        required
+                    >
+                    <small class="error-campo" id="error-alumno">
+                        {{ errores.get('alumno', '') }}
+                    </small>
+                </div>
 
-        <label>INE del tutor:</label>
-        <input type="text" name="ine" maxlength="40" required>
+                <div class="grupo-campo">
+                    <label for="curp">CURP</label>
+                    <input
+                        type="text"
+                        id="curp"
+                        name="curp"
+                        minlength="18"
+                        maxlength="18"
+                        pattern="[A-Za-z0-9]{18}"
+                        placeholder="18 caracteres alfanuméricos"
+                        value="{{ valores.get('curp', '') }}"
+                        autocomplete="off"
+                        required
+                    >
+                    <small class="ayuda">
+                        Debe contener exactamente 18 letras y números.
+                    </small>
+                    <small class="error-campo" id="error-curp">
+                        {{ errores.get('curp', '') }}
+                    </small>
+                </div>
 
-        <br><br>
+            
+          <div class="grupo-campo">
+    <label for="grupo">Grupo</label>
+    <input
+        type="text"
+        id="grupo"
+        name="grupo"
+        placeholder="Ejemplo: A"
+        maxlength="10"
+        value="{{ valores.get('grupo', '') }}"
+        required
+    >
+    <small class="error-campo" id="error-grupo">
+        {{ errores.get('grupo', '') }}
+    </small>
+</div>
+                <div class="grupo-campo">
+    <label for="grado">Grado</label>
+    <input
+        type="number"
+        id="grado"
+        name="grado"
+        min="1"
+        max="15"
+        step="1"
+        placeholder="Ejemplo: 4"
+        value="{{ valores.get('grado', '') }}"
+        required
+    >
+    <small class="ayuda">
+        Ingresa un número entero del 1 al 15.
+    </small>
+    <small class="error-campo" id="error-grado">
+        {{ errores.get('grado', '') }}
+    </small>
+</div>
+                <div class="grupo-campo">
+                    <label for="tiene_especialidad">¿Tiene área de especialidad?</label>
+                    <select
+                        id="tiene_especialidad"
+                        name="tiene_especialidad"
+                        required
+                    >
+                        <option value="">Selecciona una opción</option>
+                        <option value="si" {% if valores.get('tiene_especialidad') == 'si' %}selected{% endif %}>Sí</option>
+                        <option value="no" {% if valores.get('tiene_especialidad') == 'no' %}selected{% endif %}>No</option>
+                    </select>
+                    <small class="error-campo" id="error-tiene_especialidad">
+                        {{ errores.get('tiene_especialidad', '') }}
+                    </small>
+                </div>
 
-        <label>Teléfono:</label>
-        <input type="text" name="telefono">
+                <div class="grupo-campo" id="contenedor_especialidad"
+                     {% if valores.get('tiene_especialidad') != 'si' %}style="display: none;"{% endif %}>
+                    <label for="especialidad">Área de especialidad</label>
+                    <input
+                        type="text"
+                        id="especialidad"
+                        name="especialidad"
+                        maxlength="100"
+                        placeholder="Escribe el área de especialidad"
+                        value="{{ valores.get('especialidad', '') }}"
+                    >
+                    <small class="error-campo" id="error-especialidad">
+                        {{ errores.get('especialidad', '') }}
+                    </small>
+                </div>
 
-        <br><br>
+            </section>
 
-        <button type="submit">Registrar alumno</button>
+            <section class="seccion-formulario">
 
-    </form>
+                <h2>Datos del tutor</h2>
+
+                <div class="grupo-campo">
+                    <label for="tutor">Nombre completo del tutor</label>
+                    <input
+                        type="text"
+                        id="tutor"
+                        name="tutor"
+                        maxlength="100"
+                        placeholder="Ejemplo: María López García"
+                        value="{{ valores.get('tutor', '') }}"
+                        required
+                    >
+                    <small class="error-campo" id="error-tutor">
+                        {{ errores.get('tutor', '') }}
+                    </small>
+                </div>
+
+                <div class="grupo-campo">
+                    <label for="ine">Clave de elector de la INE</label>
+                    <input
+                        type="text"
+                        id="ine"
+                        name="ine"
+                        placeholder="18 caracteres alfanuméricos"
+                        minlength="18"
+                        maxlength="18"
+                        autocomplete="off"
+                        value="{{ valores.get('ine', '') }}"
+                        required
+                    >
+                    <small class="ayuda">
+                        Escribe la clave de elector de 18 caracteres,
+                        no el OCR ni el número de emisión.
+                    </small>
+                    <small class="error-campo" id="error-ine">
+                        {{ errores.get('ine', '') }}
+                    </small>
+                </div>
+
+                <div class="grupo-campo">
+                    <label for="telefono">Número telefónico</label>
+                    <input
+                        type="tel"
+                        id="telefono"
+                        name="telefono"
+                        placeholder="Ejemplo: 2461234567"
+                        maxlength="10"
+                        inputmode="numeric"
+                        value="{{ valores.get('telefono', '') }}"
+                        required
+                    >
+                    <small class="ayuda">
+                        Debe contener exactamente 10 números.
+                    </small>
+                    <small class="error-campo" id="error-telefono">
+                        {{ errores.get('telefono', '') }}
+                    </small>
+                </div>
+
+                <div class="grupo-campo">
+                    <label for="correo">Correo electrónico (opcional)</label>
+                    <input
+                        type="email"
+                        id="correo"
+                        name="correo"
+                        placeholder="Ejemplo: usuario@gmail.com"
+                        value="{{ valores.get('correo', '') }}"
+                    >
+                    <small class="error-campo" id="error-correo">
+                        {{ errores.get('correo', '') }}
+                    </small>
+                </div>
+
+            </section>
+
+            <button type="submit" class="btn-registrar">
+                Registrar alumno y tutor
+            </button>
+
+        </form>
+
+        {% if enlace %}
+            <section class="resultado-enlace">
+                <h2>Vincular Telegram</h2>
+                <p>
+                    El registro se realizó correctamente.
+                    Comparte este enlace con el tutor para vincular Telegram:
+                </p>
+                <a href="{{ enlace }}" target="_blank" rel="noopener noreferrer" class="btn-telegram">
+                    Vincular Telegram
+                </a>
+            </section>
+        {% endif %}
+
+    </main>
+
+    <script>
+const campos = {
+    matricula: document.getElementById("matricula"),
+    alumno: document.getElementById("alumno"),
+    curp: document.getElementById("curp"),
+    grado: document.getElementById("grado"),
+    grupo: document.getElementById("grupo"),
+    tiene_especialidad: document.getElementById("tiene_especialidad"),
+    especialidad: document.getElementById("especialidad"),
+    tutor: document.getElementById("tutor"),
+    ine: document.getElementById("ine"),
+    telefono: document.getElementById("telefono"),
+    correo: document.getElementById("correo")
+};
+       
+        function mostrarEspecialidad() {
+            const mostrar = campos.tiene_especialidad.value === "si";
+            document.getElementById("contenedor_especialidad").style.display =
+                mostrar ? "block" : "none";
+
+            campos.especialidad.required = mostrar;
+
+            if (!mostrar) {
+                campos.especialidad.value = "";
+                campos.especialidad.classList.remove(
+                    "campo-invalido",
+                    "campo-valido"
+                );
+                document.getElementById("error-especialidad").textContent = "";
+            }
+        }
+
+        function validarCampo(nombre) {
+            const campo = campos[nombre];
+            const mensaje = document.getElementById("error-" + nombre);
+            const valor = campo.value.trim();
+
+            let error = "";
+
+            const patronNombre =
+                /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:[ '-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/;
+
+            switch (nombre) {
+
+                case "matricula":
+                    if (!valor) {
+                        error = "Ingresa la matrícula asignada por la institución.";
+                    } else if (valor.length > 20) {
+                        error = "La matrícula no puede superar los 20 caracteres.";
+                    }
+                    break;
+
+                case "alumno":
+                case "tutor":
+                    if (!valor) {
+                        error = nombre === "alumno"
+                            ? "Ingresa el nombre completo del alumno."
+                            : "Ingresa el nombre completo del tutor.";
+                    } else if (!patronNombre.test(valor)) {
+                        error = "Utiliza solamente letras, espacios, acentos, guiones o apóstrofes.";
+                    }
+                    break;
+
+                case "curp":
+                    if (!valor) {
+                        error = "Ingresa la CURP del alumno.";
+                    } else if (!/^[A-Za-z0-9]{18}$/.test(valor)) {
+                        error = "La CURP debe contener exactamente 18 caracteres alfanuméricos.";
+                    }
+                    break;
+
+                
+                case "grado":
+                    if (!valor) {
+                        error = "Ingresa el grado del alumno.";
+                    } else if (!/^\d+$/.test(valor) ||
+                               Number(valor) < 1 ||
+                               Number(valor) > 55) {
+                        error = "El grado debe ser un número entero del 1 al 15.";
+                    }
+                    break;
+                case "grupo":
+    if (!valor) {
+        error = "Ingresa el grupo del alumno.";
+    } else if (!/^[A-Z]{1,10}$/.test(valor)) {
+        error = "El grupo solo debe contener letras.";
+    }
+    break;
+            break;
+
+                case "tiene_especialidad":
+                    if (!valor) {
+                        error = "Indica si el alumno tiene área de especialidad.";
+                    }
+                    break;
+
+                case "especialidad":
+                    if (campos.tiene_especialidad.value === "si" && !valor) {
+                        error = "Escribe el área de especialidad.";
+                    } else if (valor.length > 100) {
+                        error = "La especialidad no puede superar los 100 caracteres.";
+                    }
+                    break;
+
+                case "ine":
+                    if (!valor) {
+                        error = "Ingresa la clave de elector de la INE.";
+                    } else if (!/^[A-Za-z0-9]{18}$/.test(valor)) {
+                        error = "Debe tener exactamente 18 caracteres, únicamente letras y números.";
+                    }
+                    break;
+
+                case "telefono":
+                    if (!valor) {
+                        error = "Ingresa el número telefónico del tutor.";
+                    } else if (!/^[0-9]{10}$/.test(valor)) {
+                        error = "Escribe exactamente 10 números, sin espacios ni guiones.";
+                    }
+                    break;
+
+                case "correo":
+                    if (valor && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(valor)) {
+                        error = "Escribe un correo válido. Ejemplo: usuario@gmail.com.";
+                    }
+                    break;
+            }
+
+            if (mensaje) {
+                mensaje.textContent = error;
+            }
+
+            if (error) {
+                campo.classList.add("campo-invalido");
+                campo.classList.remove("campo-valido");
+            } else {
+                campo.classList.remove("campo-invalido");
+
+                if (valor) {
+                    campo.classList.add("campo-valido");
+                } else {
+                    campo.classList.remove("campo-valido");
+                }
+            }
+
+            return error === "";
+        }
+
+        // Convertir CURP e INE a mayúsculas.
+        campos.curp.addEventListener("input", function() {
+            this.value = this.value.toUpperCase();
+        });
+
+        campos.ine.addEventListener("input", function() {
+            this.value = this.value.toUpperCase();
+        });
+
+        // Mostrar u ocultar especialidad.
+        campos.tiene_especialidad.addEventListener("change", function() {
+            mostrarEspecialidad();
+            validarCampo("tiene_especialidad");
+
+            if (this.value === "si") {
+                validarCampo("especialidad");
+            }
+        });
+
+        // Validar los campos al escribir y al salir de ellos.
+        Object.keys(campos).forEach(nombre => {
+            const campo = campos[nombre];
+
+            campo.addEventListener("input", () => validarCampo(nombre));
+            campo.addEventListener("change", () => validarCampo(nombre));
+            campo.addEventListener("blur", () => validarCampo(nombre));
+        });
+
+        mostrarEspecialidad();
+
+        // Validar antes de enviar el formulario.
+        document.getElementById("formularioRegistro")
+            .addEventListener("submit", function(event) {
+
+                let formularioValido = true;
+
+                Object.keys(campos).forEach(nombre => {
+                    if (nombre === "especialidad" &&
+                        campos.tiene_especialidad.value !== "si") {
+                        return;
+                    }
+
+                    if (!validarCampo(nombre)) {
+                        formularioValido = false;
+                    }
+                });
+
+                if (!formularioValido) {
+                    event.preventDefault();
+
+                    const primerInvalido =
+                        this.querySelector(".campo-invalido");
+
+                    if (primerInvalido) {
+                        primerInvalido.focus();
+                    }
+                }
+            });
+
+            // CONFIRMAR BAJA DE ALUMNO
+function confirmarBaja(formulario) {
+
+    const confirmado = confirm(
+        "¿Estás seguro de que deseas dar de baja a este alumno?"
+    );
+
+    if (!confirmado) {
+        return false;
+    }
+
+    const motivo = prompt("Escribe el motivo de la baja:");
+
+    if (motivo === null || motivo.trim() === "") {
+        alert("Debes escribir el motivo de la baja.");
+        return false;
+    }
+
+    formulario.querySelector(
+        'input[name="motivo"]'
+    ).value = motivo.trim();
+
+    return true;
+}
+
+// CONFIRMAR BAJA DE TUTOR
+function confirmarBajaTutor() {
+
+    return confirm(
+        "¿Estás seguro de que deseas dar de baja a este tutor?"
+    );
+
+}
+    </script>
 
 </body>
 </html>

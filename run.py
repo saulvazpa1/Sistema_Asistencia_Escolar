@@ -1,3 +1,4 @@
+
 import subprocess
 import sys
 import time
@@ -22,7 +23,6 @@ print("Ambos servicios están funcionando.")
 
 try:
     while True:
-        # Comprobar que ambos procesos sigan activos
         if app.poll() is not None:
             print("El servidor Flask se ha detenido.")
             break
