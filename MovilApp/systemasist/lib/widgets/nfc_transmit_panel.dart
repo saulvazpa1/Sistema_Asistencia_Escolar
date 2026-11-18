@@ -13,6 +13,7 @@ class NfcTransmitPanel extends StatelessWidget {
     required this.onStart,
     required this.onCancel,
     required this.onRetry,
+    required bool hceMode,
   });
 
   final NfcUiState state;

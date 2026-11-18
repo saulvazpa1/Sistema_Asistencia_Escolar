@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-// ------------- Datos del estudiante que mostrar en la crendencial -----------
-
+/// Datos institucionales del alumno que se muestran en la credencial.
 class Student {
   Student({
     required this.matricula,
@@ -22,21 +21,21 @@ class Student {
   final String carrera;
   final String grupo;
 
-  // ----------- Fotografia via URL o en base64 ----------
+  /// Fotografía por URL (el servidor puede exigir el token) o embebida en base64.
   final String? fotoUrl;
   final String? fotoBase64;
 
   final bool credencialActiva;
   final bool telegramVinculado;
 
-  // ------- Bytes de la foto decodificados una sola vez --------
+  /// Bytes de la foto decodificados una sola vez (evita decodificar en cada build).
   late final Uint8List? fotoBytes = _decodePhoto();
 
   Uint8List? _decodePhoto() {
     final raw = fotoBase64;
     if (raw == null || raw.isEmpty) return null;
     try {
-      // ----- Aceptar tanto base64 puro como "data:image/png;base64,..." -----
+      // Acepta tanto base64 puro como "data:image/jpeg;base64,...."
       final comma = raw.indexOf(',');
       final clean = raw.startsWith('data:') && comma != -1
           ? raw.substring(comma + 1)
@@ -46,6 +45,19 @@ class Student {
       return null;
     }
   }
+
+  /// Copia del alumno con una fotografía nueva (guardada embebida en base64).
+  Student withPhoto(Uint8List bytes) => Student(
+    matricula: matricula,
+    nombreCompleto: nombreCompleto,
+    curp: curp,
+    carrera: carrera,
+    grupo: grupo,
+    fotoUrl: fotoUrl,
+    fotoBase64: base64Encode(bytes),
+    credencialActiva: credencialActiva,
+    telegramVinculado: telegramVinculado,
+  );
 
   factory Student.fromJson(Map<String, dynamic> json) {
     return Student(

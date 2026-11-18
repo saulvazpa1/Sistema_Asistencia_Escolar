@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-//import 'dart:typed_data';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -16,23 +16,43 @@ import '../models/auth_session.dart';
 import '../models/nfc_ui_state.dart';
 import 'access_service.dart';
 
+/// Gestiona TODO el ciclo NFC de la credencial (modo "punto de acceso"):
+///
+///   1. Verifica hardware / estado del NFC ([refreshAvailability]).
+///   2. Abre una sesión de lectura ([startScan]) y espera la etiqueta fija de la puerta.
+///   3. Extrae el identificador del punto (NDEF de texto/URI, o UID de la etiqueta).
+///   4. Envía token + UID del alumno al backend con reintentos ([AccessService]).
+///   5. Cierra SIEMPRE la sesión NFC (éxito, error, timeout, cancelación o dispose).
+///
+/// La UI solo escucha [state].
 class NfcService {
-  NfcService({required AccessService accessService}) : _access = accessService;
+  NfcService({required AccessService accessService, this.hceMode = false})
+    : _access = accessService;
 
   final AccessService _access;
 
+  /// `true` cuando el teléfono también responde como tarjeta (HCE) ante el lector de la puerta.
+  /// En ese caso la lectura de etiquetas es opcional/manual: el modo lector apaga el HCE.
+  final bool hceMode;
+
+  NfcUiState _idle() => NfcUiState.idle(
+    detail: hceMode ? 'Acerca tu teléfono al lector de la puerta.' : null,
+  );
+
+  /// Estado observable para la UI.
   final ValueNotifier<NfcUiState> state = ValueNotifier<NfcUiState>(
     const NfcUiState.checking(),
   );
 
+  /// Se invoca cuando el servidor responde 401 (token inválido).
   VoidCallback? onSessionExpired;
 
   NfcAvailability _availability = NfcAvailability.unsupported;
   AuthSession? _session;
   CheckInPoint? _lastPoint;
 
-  bool _sessionActive = false;
-  bool _busy = false;
+  bool _sessionActive = false; // hay una sesión nativa abierta
+  bool _busy = false; // procesando una lectura / enviando (anti doble disparo)
   bool _disposed = false;
 
   Timer? _scanTimeout;
@@ -41,6 +61,13 @@ class NfcService {
   bool get isEnabled => _availability == NfcAvailability.enabled;
   bool get isSupported => _availability != NfcAvailability.unsupported;
 
+  // ---------------------------------------------------------------------------
+  // Disponibilidad
+  // ---------------------------------------------------------------------------
+
+  /// Consulta hardware + estado del NFC y actualiza [state].
+  /// Llamar al iniciar y cada vez que la app vuelve a primer plano
+  /// (el usuario pudo activar el NFC en ajustes).
   Future<void> refreshAvailability() async {
     NfcAvailability availability;
     try {
@@ -66,11 +93,16 @@ class NfcService {
         if (phase == NfcPhase.checking ||
             phase == NfcPhase.disabled ||
             phase == NfcPhase.unsupported) {
-          _emit(const NfcUiState.idle());
+          _emit(_idle());
         }
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Sesión de lectura
+  // ---------------------------------------------------------------------------
+
+  /// Abre la sesión NFC y queda a la espera de la etiqueta del punto de acceso.
   Future<void> startScan(AuthSession session) async {
     _session = session;
     if (_disposed || _busy || _sessionActive) return;
@@ -98,14 +130,15 @@ class NfcService {
     }
   }
 
-  // -------------- Cancela la espera --------------
+  /// Cancela la espera (botón "Cancelar", app en segundo plano...).
   Future<void> cancel() async {
     _scanTimeout?.cancel();
-    if (_busy) return;
+    if (_busy) return; // no abortar un envío en curso
     await _closeSession();
-    if (!_disposed && isEnabled) _emit(const NfcUiState.idle());
+    if (!_disposed && isEnabled) _emit(_idle());
   }
 
+  /// Reenvía el último punto leído sin pedir un nuevo toque (tras un error de red).
   Future<void> retrySend() async {
     final point = _lastPoint;
     if (_disposed || _busy || point == null || _session == null) return;
@@ -113,6 +146,7 @@ class NfcService {
     await _send(point);
   }
 
+  /// Libera TODO: timers, sesión nativa y notifier. Llamar desde `dispose()`.
   void dispose() {
     if (_disposed) return;
     _disposed = true;
@@ -122,8 +156,13 @@ class NfcService {
     state.dispose();
   }
 
+  // ---------------------------------------------------------------------------
+  // Callbacks NFC
+  // ---------------------------------------------------------------------------
+
   Future<void> _onDiscovered(NfcTag tag) async {
-    if (_disposed || _busy) return;
+    if (_disposed || _busy)
+      return; // Android puede disparar varias veces seguidas
     _busy = true;
     _scanTimeout?.cancel();
 
@@ -139,6 +178,7 @@ class NfcService {
   }
 
   void _onIosSessionError(NfcReaderSessionErrorIos error) {
+    // iOS ya invalidó la sesión por su cuenta.
     _sessionActive = false;
     _scanTimeout?.cancel();
     if (_disposed || _busy) return;
@@ -147,13 +187,15 @@ class NfcService {
     switch (error.code) {
       case NfcReaderErrorCodeIos.readerSessionInvalidationErrorUserCanceled:
       case NfcReaderErrorCodeIos.readerSessionInvalidationErrorSessionTimeout:
-        _emit(const NfcUiState.idle());
+        _emit(_idle());
       default:
         _emit(NfcUiState.error(error.message));
     }
   }
 
-  // ------------------- Envío con reintentos -------------
+  // ---------------------------------------------------------------------------
+  // Envío con reintentos
+  // ---------------------------------------------------------------------------
 
   Future<void> _send(CheckInPoint point) async {
     final session = _session;
@@ -176,7 +218,7 @@ class NfcService {
         _successReset?.cancel();
         _successReset = Timer(AppConfig.successResetDelay, () {
           if (!_disposed && state.value.phase == NfcPhase.success) {
-            _emit(const NfcUiState.idle());
+            _emit(_idle());
           }
         });
         return;
@@ -213,7 +255,9 @@ class NfcService {
     _emit(NfcUiState.error(message, canRetry: canRetry && _lastPoint != null));
   }
 
-  // ----------------- Utilidades ---------------
+  // ---------------------------------------------------------------------------
+  // Utilidades
+  // ---------------------------------------------------------------------------
 
   void _armScanTimeout() {
     _scanTimeout?.cancel();
@@ -228,7 +272,7 @@ class NfcService {
     });
   }
 
-  // ---------------- Cierra la sesión nativa -----------
+  /// Cierra la sesión nativa de forma idempotente (nunca lanza).
   Future<void> _closeSession({
     String? alertMessageIos,
     String? errorMessageIos,
@@ -253,13 +297,19 @@ class NfcService {
     }
   }
 
-  // ---------- Lectura de la etiqueta -----------
+  // ---------------------------------------------------------------------------
+  // Lectura de la etiqueta
+  // ---------------------------------------------------------------------------
 
+  /// Obtiene el identificador del punto de acceso a partir de la etiqueta.
+  /// Prioridad: registro NDEF (texto o URI) > UID de la etiqueta.
   Future<CheckInPoint?> _extractPoint(NfcTag tag) async {
     Uint8List? uid;
     NdefMessage? message;
 
     try {
+      // IMPORTANTE: los helpers `.from(tag)` son específicos de plataforma;
+      // usarlos en la plataforma equivocada lanza un TypeError.
       switch (defaultTargetPlatform) {
         case TargetPlatform.android:
           uid = NfcTagAndroid.from(tag)?.id;
@@ -308,6 +358,7 @@ class NfcService {
     'mailto:',
   ];
 
+  /// Decodifica el primer registro NDEF well-known de tipo Texto ('T') o URI ('U').
   String? _pointIdFromNdef(NdefMessage? message) {
     if (message == null) return null;
 
@@ -317,14 +368,14 @@ class NfcService {
 
       final payload = record.payload;
       switch (record.type[0]) {
-        case 0x54:
+        case 0x54: // 'T' - texto: [status][lang...][texto]
           final langLength = payload[0] & 0x3F;
           if (payload.length <= 1 + langLength) continue;
           final text = utf8
               .decode(payload.sublist(1 + langLength), allowMalformed: true)
               .trim();
           if (text.isNotEmpty) return text;
-        case 0x55:
+        case 0x55: // 'U' - URI: [prefijo][resto]
           final prefix = payload[0] < _uriPrefixes.length
               ? _uriPrefixes[payload[0]]
               : '';

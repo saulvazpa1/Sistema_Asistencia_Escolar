@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Texto que Android muestra en Ajustes > NFC > Pago/tarjeta predeterminada -->
+    <string name="hce_service_description">Credencial digital NexoEscolar</string>
+</resources>
