@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart' show ImageSource;
 
 import '../core/app_config.dart';
 import '../core/app_theme.dart';
@@ -10,26 +12,31 @@ import '../models/nfc_ui_state.dart';
 import '../models/student.dart';
 import '../services/access_service.dart';
 import '../services/nfc_service.dart';
+import '../services/photo_service.dart';
 import '../widgets/nexo_logo.dart';
 import '../widgets/nfc_status_banner.dart';
 import '../widgets/nfc_transmit_panel.dart';
 import '../widgets/properties_dialog.dart';
 import '../widgets/qr_backup_dialog.dart';
 
-// ---------------- Credencial digital + transmisión NFC --------------
+/// Credencial digital + transmisión NFC (modo punto de acceso).
 class DigitalIdScreen extends StatefulWidget {
   const DigitalIdScreen({
     super.key,
     required this.session,
     required this.accessService,
     required this.onLogout,
+    required this.onPhotoChanged,
   });
 
   final AuthSession session;
   final AccessService accessService;
 
-  // -------------- Borra el almacenamiento cifrado y regresa al login ---------------
+  /// Borra el almacenamiento cifrado y regresa al login.
   final Future<void> Function() onLogout;
+
+  /// El padre guarda la foto nueva y reconstruye la credencial.
+  final Future<void> Function(Uint8List bytes) onPhotoChanged;
 
   @override
   State<DigitalIdScreen> createState() => _DigitalIdScreenState();
@@ -38,9 +45,14 @@ class DigitalIdScreen extends StatefulWidget {
 class _DigitalIdScreenState extends State<DigitalIdScreen>
     with WidgetsBindingObserver {
   late final NfcService _nfc;
+  final _photoService = PhotoService();
   bool _disabledDialogShown = false;
 
   Student get _student => widget.session.student;
+
+  bool get _hceMode =>
+      AppConfig.hceEnabledOnAndroid &&
+      defaultTargetPlatform == TargetPlatform.android;
 
   bool get _autoStart =>
       AppConfig.autoStartScanOnAndroid &&
@@ -51,7 +63,8 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _nfc = NfcService(accessService: widget.accessService)
+
+    _nfc = NfcService(accessService: widget.accessService, hceMode: _hceMode)
       ..onSessionExpired = _handleSessionExpired;
     unawaited(_bootNfc());
   }
@@ -125,6 +138,50 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
     }
   }
 
+  Future<void> _confirmLogout() async {
+    final confirmed = await showLogoutConfirmDialog(context);
+    if (confirmed == true) await widget.onLogout();
+  }
+
+  /// Agregar / cambiar la foto: cámara o galería.
+  Future<void> _changePhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: NexoColors.modal,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera, color: Colors.white),
+              title: const Text('Tomar foto'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.white),
+              title: const Text('Elegir de la galería'),
+              onTap: () => Navigator.of(ctx).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    try {
+      final bytes = await _photoService.pick(source);
+      if (bytes == null || !mounted) return; // el usuario canceló
+      await widget.onPhotoChanged(bytes);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo guardar la foto. Intenta con otra imagen.'),
+        ),
+      );
+    }
+  }
+
   Future<void> _openProperties() {
     return showPropertiesDialog(
       context,
@@ -142,7 +199,7 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
       body: SafeArea(
         child: Column(
           children: [
-            _Header(onMenu: _openProperties),
+            _Header(onLogout: _confirmLogout, onInfo: _openProperties),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
@@ -167,13 +224,13 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
                           ),
                           _CredentialCard(
                             student: _student,
-                            onShowQr: () =>
-                                showQrBackupDialog(context, widget.session),
+                            onAddPhoto: _changePhoto,
                           ),
                           const SizedBox(height: 16),
                           NfcTransmitPanel(
                             state: nfcState,
                             credentialActive: _student.credencialActiva,
+                            hceMode: _hceMode,
                             onStart: _startScan,
                             onCancel: () => unawaited(_nfc.cancel()),
                             onRetry: _retry,
@@ -206,9 +263,10 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onMenu});
+  const _Header({required this.onLogout, required this.onInfo});
 
-  final VoidCallback onMenu;
+  final VoidCallback onLogout;
+  final VoidCallback onInfo;
 
   @override
   Widget build(BuildContext context) {
@@ -229,11 +287,18 @@ class _Header extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Opciones',
-            iconSize: 32,
+            tooltip: 'Estado de la credencial',
+            iconSize: 28,
+            color: Colors.white70,
+            onPressed: onInfo,
+            icon: const Icon(Icons.info_outline),
+          ),
+          IconButton(
+            tooltip: 'Cerrar sesión',
+            iconSize: 30,
             color: Colors.white,
-            onPressed: onMenu,
-            icon: const Icon(Icons.menu),
+            onPressed: onLogout,
+            icon: const Icon(Icons.logout),
           ),
         ],
       ),
@@ -243,10 +308,10 @@ class _Header extends StatelessWidget {
 
 /// Tarjeta institucional: foto, nombre, matrícula, CURP, carrera y grupo.
 class _CredentialCard extends StatelessWidget {
-  const _CredentialCard({required this.student, required this.onShowQr});
+  const _CredentialCard({required this.student, required this.onAddPhoto});
 
   final Student student;
-  final VoidCallback onShowQr;
+  final VoidCallback onAddPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -260,7 +325,7 @@ class _CredentialCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: _Photo(student: student, onShowQr: onShowQr),
+            child: _Photo(student: student, onAddPhoto: onAddPhoto),
           ),
           const SizedBox(height: 10),
           Center(
@@ -324,10 +389,10 @@ class _Field extends StatelessWidget {
 
 /// Fotografía del alumno (bytes base64 > URL > marcador de posición) + botón QR.
 class _Photo extends StatelessWidget {
-  const _Photo({required this.student, required this.onShowQr});
+  const _Photo({required this.student, required this.onAddPhoto});
 
   final Student student;
-  final VoidCallback onShowQr;
+  final VoidCallback onAddPhoto;
 
   static const double _width = 180;
   static const double _height = 230;
@@ -354,9 +419,9 @@ class _Photo extends StatelessWidget {
               color: NexoColors.modal,
               shape: const CircleBorder(),
               child: IconButton(
-                tooltip: 'Código QR de respaldo',
-                onPressed: onShowQr,
-                icon: const Icon(Icons.qr_code_2, color: Colors.white),
+                tooltip: 'Agregar o cambiar foto',
+                onPressed: onAddPhoto,
+                icon: const Icon(Icons.add_a_photo, color: Colors.white),
               ),
             ),
           ),

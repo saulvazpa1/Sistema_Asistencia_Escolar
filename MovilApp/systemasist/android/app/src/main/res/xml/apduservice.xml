@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Registro del servicio HCE de NexoEscolar.
+  AID propietario (prefijo F0): F0 4E 45 58 4F 01  = F0 + "NEXO" + 01
+  El lector debe enviar:  00 A4 04 00 06 F0 4E 45 58 4F 01 00
+-->
+<host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/hce_service_description"
+    android:requireDeviceUnlock="false">
+    <aid-group
+        android:category="other"
+        android:description="@string/hce_service_description">
+        <aid-filter android:name="F04E45584F01" />
+    </aid-group>
+</host-apdu-service>

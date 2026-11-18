@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
+  image_picker: ^1.1.2
 
   # ---------- Dependencias NFC --------
   nfc_manager : ^4.2.1

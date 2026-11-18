@@ -1,23 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  NexoEscolar - AndroidManifest.xml (android/app/src/main/AndroidManifest.xml)
+
+  Requisitos en android/app/build.gradle(.kts):
+    minSdk = 24   (flutter_secure_storage 9.x exige >= 23, nfc_manager >= 24)
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Permisos-->
-    <uses-permission android:name = "android.permission.NFC" /> 
+    <!-- Permisos -->
+    <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.INTERNET" />
 
-
-    <!-- La app se puede instalar en equipos sin NFC.
-      La app detecta la falta de hardware en tiempo de ejecucion y ofrece el QR de respaldo. -->
+    <!--
+      required="false": la app se puede instalar en equipos sin NFC.
+      La app detecta la falta de hardware en tiempo de ejecucion y ofrece el QR de respaldo.
+    -->
     <uses-feature
-        android:name = "android.hardware.nfc"
-        android:required = "false" />
+        android:name="android.hardware.nfc"
+        android:required="false" />
+
+    <!-- HCE (emulación de tarjeta). required=false: sin HCE se usa el modo de etiqueta / QR -->
+    <uses-feature
+        android:name="android.hardware.nfc.hce"
+        android:required="false" />
 
     <application
-        android:label="systemasist"
+        android:label="NexoEscolar"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:allowBackup = "false"
+        android:allowBackup="false"
         android:fullBackupContent="false"
         android:usesCleartextTraffic="false">
+
+        <!--
+          allowBackup=false: evita restaurar SharedPreferences cifradas sin su llave del Keystore
+          (provoca errores de descifrado al reinstalar / migrar de telefono).
+        -->
 
         <activity
             android:name=".MainActivity"
@@ -28,34 +46,40 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
-            <!-- Specifies an Android theme to apply to this Activity as soon as
-                 the Android process has started. This theme is visible to the user
-                 while the Flutter UI initializes. After that, this theme continues
-                 to determine the Window background behind the Flutter UI. -->
+
             <meta-data
-              android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+
+        <!-- HCE: el teléfono actúa como tarjeta ante el lector de la puerta (funciona con la app cerrada) -->
+        <service
+            android:name=".NexoHostApduService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NFC_SERVICE">
+            <intent-filter>
+                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.cardemulation.host_apdu_service"
+                android:resource="@xml/apduservice" />
+        </service>
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
-    <!-- Required to query activities that can process text, see:
-         https://developer.android.com/training/package-visibility and
-         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
 
-         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <!-- Requerido por Flutter para procesar texto (menu de seleccion) -->
     <queries>
         <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
         </intent>
     </queries>
 </manifest>

@@ -156,7 +156,11 @@ class _Wordmark extends StatelessWidget {
           TextSpan(
             text: 'STUDIOS',
             style: TextStyle(
+<<<<<<< HEAD
               color: NexoColors.green,
+=======
+              color: Color.fromARGB(255, 0, 0, 0),
+>>>>>>> temp-cambios
               fontWeight: FontWeight.w300,
             ),
           ),
@@ -178,11 +182,19 @@ class _BotMarkPainter extends CustomPainter {
     final stroke = s * 0.07;
 
     final line = Paint()
+<<<<<<< HEAD
       ..color = NexoColors.green
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round;
     final fill = Paint()..color = NexoColors.green;
+=======
+      ..color = const Color.fromARGB(255, 0, 0, 0)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round;
+    final fill = Paint()..color = const Color.fromARGB(255, 0, 0, 0);
+>>>>>>> temp-cambios
     final white = Paint()..color = Colors.white;
 
     // Cabeza
