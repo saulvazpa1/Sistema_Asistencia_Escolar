@@ -6,6 +6,7 @@ import 'core/app_theme.dart';
 import 'models/auth_session.dart';
 import 'screens/digital_id_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/spashScreen.dart';
 import 'services/access_service.dart';
 import 'services/auth_service.dart';
 import 'services/secure_storage_service.dart';
@@ -38,9 +39,14 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
     _restoreSession();
   }
 
-  // ------ La credencial ya descargada se recupera del alamcenamiento cifrado ------
+  /// La credencial ya descargada se recupera del almacenamiento cifrado (funciona offline).
   Future<void> _restoreSession() async {
-    final session = await _storage.loadSession();
+    // La lectura cifrada y el tiempo mínimo del splash corren en paralelo.
+    final results = await Future.wait<Object?>([
+      _storage.loadSession(),
+      Future<void>.delayed(AppConfig.splashMinDuration),
+    ]);
+    final session = results.first as AuthSession?;
     if (!mounted) return;
     setState(() {
       _session = session;
@@ -49,15 +55,14 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
   }
 
   Future<void> _handleLoggedIn(AuthSession session) async {
-    // -------- Mostrar Error si falla LoginScreen --------
-
-    await _storage.saveSession(session);
-
+    await _storage.saveSession(
+      session,
+    ); // si falla, LoginScreen muestra el error
     if (!mounted) return;
     setState(() => _session = session);
   }
 
-  Future<void> _handleLogOut() async {
+  Future<void> _handleLogout() async {
     await _storage.clear();
     if (!mounted) return;
     setState(() => _session = null);
@@ -68,9 +73,8 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
     final session = _session;
 
     final Widget home;
-
     if (_booting) {
-      home = const Scaffold(body: Center(child: CircularProgressIndicator()));
+      home = const SplashScreen();
     } else if (session == null) {
       home = LoginScreen(
         authService: _authService,
@@ -81,12 +85,12 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
         key: ValueKey(session.uid),
         session: session,
         accessService: _accessService,
-        onLogout: _handleLogOut,
+        onLogout: _handleLogout,
       );
     }
 
     return MaterialApp(
-      title: 'Nexo Escolar',
+      title: 'NexoEscolar',
       debugShowCheckedModeBanner: false,
       theme: buildNexoTheme(),
       home: home,

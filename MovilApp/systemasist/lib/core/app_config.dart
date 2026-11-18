@@ -34,6 +34,9 @@ abstract final class AppConfig {
   // --------- Longitud maxima que acepta el identificador del punto de acceso ----------
   static const int maxPointIdLength = 128;
 
+  // -------------- Tiempo mínimo que se muestra el splash ------------------
+  static const Duration splashMinDuration = Duration(milliseconds: 2400);
+
   // --------- Evita publicar una construccion apuntando a HTTP ----------
   static void assertSafeForRelease() {
     if (kReleaseMode && useMock) {
