@@ -51,11 +51,9 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
       Future<void>.delayed(AppConfig.splashMinDuration),
     ]);
     final session = results.first as AuthSession?;
-<<<<<<< HEAD
-=======
-    if (session != null)
+    if (session != null) {
       await _hce.sync(session); // re-sincroniza la copia del servicio HCE
->>>>>>> temp-cambios
+    }
     if (!mounted) return;
     setState(() {
       _session = session;
@@ -67,17 +65,11 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
     await _storage.saveSession(
       session,
     ); // si falla, LoginScreen muestra el error
-<<<<<<< HEAD
-=======
     await _hce.sync(session);
->>>>>>> temp-cambios
     if (!mounted) return;
     setState(() => _session = session);
   }
 
-<<<<<<< HEAD
-  Future<void> _handleLogout() async {
-=======
   /// Guarda la foto nueva (cifrada junto con la sesión) y actualiza la credencial en pantalla.
   Future<void> _handlePhotoChanged(Uint8List bytes) async {
     final current = _session;
@@ -90,7 +82,6 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
 
   Future<void> _handleLogout() async {
     await _hce.clear(); // el lector de la puerta deja de recibir la credencial
->>>>>>> temp-cambios
     await _storage.clear();
     if (!mounted) return;
     setState(() => _session = null);
@@ -114,10 +105,7 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
         session: session,
         accessService: _accessService,
         onLogout: _handleLogout,
-<<<<<<< HEAD
-=======
         onPhotoChanged: _handlePhotoChanged,
->>>>>>> temp-cambios
       );
     }
 

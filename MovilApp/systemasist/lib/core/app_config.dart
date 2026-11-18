@@ -36,12 +36,6 @@ abstract final class AppConfig {
   /// Longitud máxima aceptada para el identificador del punto de acceso.
   static const int maxPointIdLength = 128;
 
-<<<<<<< HEAD
-  // -------------- Tiempo mínimo que se muestra el splash ------------------
-  static const Duration splashMinDuration = Duration(milliseconds: 2400);
-
-  // --------- Evita publicar una construccion apuntando a HTTP ----------
-=======
   /// En Android el teléfono responde como tarjeta (HCE) ante el lector PC/SC de la puerta.
   static const bool hceEnabledOnAndroid = true;
 
@@ -49,7 +43,6 @@ abstract final class AppConfig {
   static const Duration splashMinDuration = Duration(milliseconds: 2400);
 
   /// Evita publicar una build de release apuntando a HTTP o en modo simulación por error.
->>>>>>> temp-cambios
   static void assertSafeForRelease() {
     if (kReleaseMode && useMock) {
       throw StateError('USE_MOCK=true no está permitido en release.');
