@@ -8,6 +8,11 @@ import psycopg
 from dotenv import load_dotenv
 from database.conexion import ConexionDB
 
+from services.credenciales_alumnos import (
+    crear_credenciales_alumno,
+    enviar_credenciales_por_telegram
+)
+
 load_dotenv()
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -98,9 +103,11 @@ class BotTelegram:
                     WHERE vinculacion_id = %s
                 """, (vinculacion_id,))
 
-                # Consultar el nombre del alumno
+                # Consultar el alumno relacionado con el tutor
                 cursor.execute("""
-                    SELECT a.alumno_nombre
+                    SELECT
+                        a.alumno_id,
+                        a.alumno_nombre
                     FROM alumnos_tutores at
                     INNER JOIN alumnos a
                         ON at.alumno_id = a.alumno_id
@@ -111,18 +118,77 @@ class BotTelegram:
 
                 resultado = cursor.fetchone()
 
-        nombre_alumno = (
-            resultado[0] if resultado
-            else "No registrado"
-        )
+        # Verificar que exista un alumno relacionado
+        if not resultado:
 
-        # Enviar confirmación a Telegram
-        self.responder(
-            chat_id,
-            "✅ ¡Telegram vinculado correctamente!\n\n"
-            f"Alumno: {nombre_alumno}\n\n"
-            "Ya puedes recibir notificaciones de entrada y salida."
-        )
+            self.responder(
+                chat_id,
+                "✅ Telegram se vinculó correctamente, pero no "
+                "se encontró un alumno relacionado con el tutor."
+            )
+            return
+
+        alumno_id, nombre_alumno = resultado
+
+        # Crear automáticamente la cuenta del alumno
+        try:
+
+            credenciales = crear_credenciales_alumno(alumno_id)
+
+            # Enviar las credenciales al tutor
+            envio = enviar_credenciales_por_telegram(
+                alumno_id,
+                credenciales
+            )
+
+            if envio["enviado"]:
+
+                self.responder(
+                    chat_id,
+                    "✅ ¡Telegram vinculado correctamente!\n\n"
+                    f"Alumno: {nombre_alumno}\n\n"
+                    "🎓 La cuenta escolar del alumno fue creada "
+                    "correctamente.\n\n"
+                    "Te hemos enviado los datos de acceso en "
+                    "un mensaje separado.\n\n"
+                    "El alumno deberá cambiar su contraseña "
+                    "en su primer inicio de sesión."
+                )
+
+            else:
+
+                self.responder(
+                    chat_id,
+                    "✅ Telegram se vinculó correctamente.\n\n"
+                    f"Alumno: {nombre_alumno}\n\n"
+                    "⚠️ La cuenta escolar fue creada, pero no "
+                    "se pudieron enviar las credenciales.\n\n"
+                    f"Motivo: {envio['mensaje']}"
+                )
+
+        except ValueError as error:
+
+            self.responder(
+                chat_id,
+                "✅ Telegram se vinculó correctamente.\n\n"
+                f"Alumno: {nombre_alumno}\n\n"
+                f"⚠️ No se creó una cuenta nueva: {error}"
+            )
+
+        except Exception as error:
+
+            print(
+                "Error al crear la cuenta del alumno:",
+                error
+            )
+
+            self.responder(
+                chat_id,
+                "✅ Telegram se vinculó correctamente.\n\n"
+                f"Alumno: {nombre_alumno}\n\n"
+                "⚠️ Ocurrió un error al crear la cuenta escolar. "
+                "Será necesario revisarlo desde el panel administrativo."
+            )
 
     def iniciar(self):
 
@@ -131,6 +197,7 @@ class BotTelegram:
             return
 
         try:
+
             requests.post(
                 f"{BASE_URL}/deleteWebhook",
                 json={"drop_pending_updates": False},
@@ -138,6 +205,7 @@ class BotTelegram:
             ).raise_for_status()
 
         except requests.RequestException as error:
+
             print("Error al conectar con Telegram:", error)
             return
 
@@ -148,6 +216,7 @@ class BotTelegram:
         while True:
 
             try:
+
                 parametros = {"timeout": 25}
 
                 if offset is not None:
@@ -175,13 +244,17 @@ class BotTelegram:
                     texto = mensaje["text"].strip()
 
                     try:
+
                         if texto.startswith("/start"):
+
                             self.procesar_start(
                                 chat_id,
                                 telegram_id,
                                 texto
                             )
+
                         else:
+
                             self.responder(
                                 chat_id,
                                 "Para vincular tu cuenta, utiliza "
@@ -190,17 +263,39 @@ class BotTelegram:
                             )
 
                     except (requests.RequestException, psycopg.Error) as error:
-                        print("Error al procesar mensaje:", error)
+
+                        print(
+                            "Error al procesar mensaje:",
+                            error
+                        )
+
+                    except Exception as error:
+
+                        print(
+                            "Error inesperado al procesar mensaje:",
+                            error
+                        )
 
             except requests.RequestException as error:
-                print("Error de conexión con Telegram:", error)
+
+                print(
+                    "Error de conexión con Telegram:",
+                    error
+                )
+
                 time.sleep(3)
 
             except psycopg.Error as error:
-                print("Error de conexión con PostgreSQL:", error)
+
+                print(
+                    "Error de conexión con PostgreSQL:",
+                    error
+                )
+
                 time.sleep(3)
 
 
 if __name__ == "__main__":
+
     bot = BotTelegram()
     bot.iniciar()

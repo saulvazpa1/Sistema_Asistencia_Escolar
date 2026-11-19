@@ -1,7 +1,10 @@
 
-
 from flask import Flask, request, render_template
 import psycopg
+import os
+
+from dotenv import load_dotenv
+from flask_jwt_extended import JWTManager
 
 from models.alumno import Alumno
 from models.tutor import Tutor
@@ -9,12 +12,29 @@ from services.registro_service import RegistroService
 from services.validaciones import validar_registro
 from routes.admin import admin_bp
 
+from api.alumnos import alumnos_api
+from api.tutores import tutores_api
+from api.auth import auth_api
+from api.credenciales import credenciales_api
+load_dotenv()
+
 app = Flask(__name__)
-app.secret_key = "Escuela-Asistencia-2026-x7Kq9Lm2Zp4Rt8"
+
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
+
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+
+jwt = JWTManager(app)
+
 registro_service = RegistroService()
 
-# Registrar las rutas del panel administrador
+# Registrar las rutas
 app.register_blueprint(admin_bp)
+app.register_blueprint(alumnos_api)
+app.register_blueprint(tutores_api)
+app.register_blueprint(auth_api)
+app.register_blueprint(credenciales_api)
+
 
 print("\n===== RUTAS DEL ADMIN =====")
 for ruta in app.url_map.iter_rules():

@@ -28,6 +28,8 @@ def validar_correo(correo):
 
     patron = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
     return bool(re.fullmatch(patron, correo))
+def validar_curp(curp):
+    return bool(re.fullmatch(r"[A-Z0-9]{18}", (curp or "").strip().upper()))
 
 
 def validar_registro(datos):

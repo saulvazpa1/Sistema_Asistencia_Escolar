@@ -1,8 +1,16 @@
 
-from flask import Blueprint, render_template, request, redirect, url_for,flash
-from psycopg.rows import dict_row
-import traceback
+import os
 import re
+import traceback
+
+from flask import (
+    Blueprint, render_template, request, redirect,
+    url_for, flash, session, abort,
+)
+from psycopg import errors
+from psycopg.rows import dict_row
+from werkzeug.security import check_password_hash
+
 from database.conexion import ConexionDB
 from services.validaciones import (
     validar_nombre,
@@ -10,8 +18,39 @@ from services.validaciones import (
     validar_ine,
     validar_correo,
 )
-from psycopg import errors
+
 admin_bp = Blueprint("admin", __name__)
+
+
+@admin_bp.before_request
+def proteger_admin():
+    if request.headers.get("Cf-Connecting-Ip"):  # viene del túnel
+        abort(404)
+    if request.endpoint != "admin.login" and not session.get("admin"):
+        return redirect(url_for("admin.login"))
+
+
+@admin_bp.route("/admin/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        usuario = request.form.get("usuario", "").strip()
+        clave = request.form.get("clave", "")
+        hash_guardado = os.getenv("ADMIN_PASS_HASH", "")
+        if (
+            usuario == os.getenv("ADMIN_USER")
+            and hash_guardado
+            and check_password_hash(hash_guardado, clave)
+        ):
+            session["admin"] = True
+            return redirect(url_for("admin.panel_admin"))
+        flash("Usuario o contraseña incorrectos.", "error")
+    return render_template("login.html")
+
+
+@admin_bp.route("/admin/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("admin.login"))
 
 
 @admin_bp.route("/admin")
