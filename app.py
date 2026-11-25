@@ -23,6 +23,9 @@ app = Flask(__name__)
 
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
+if not app.secret_key:
+    raise RuntimeError("No se encontró FLASK_SECRET_KEY en el archivo .env")
+
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
 jwt = JWTManager(app)

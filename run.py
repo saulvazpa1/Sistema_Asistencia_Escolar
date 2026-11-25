@@ -3,44 +3,46 @@ import subprocess
 import sys
 import time
 
-print("Iniciando sistema escolar...")
+procesos = []
 
-# Iniciar Flask
-app = subprocess.Popen([
-    sys.executable,
-    "app.py"
-])
+def iniciar(nombre, archivo):
+    proceso = subprocess.Popen([sys.executable, archivo])
+    procesos.append((nombre, proceso))
+    print(f"{nombre} iniciado.")
 
-# Iniciar bot de Telegram
-bot = subprocess.Popen([
-    sys.executable,
-    "bot.py"
-])
+if __name__ == "__main__":
+    print("Iniciando sistema escolar...")
 
-print("Sistema web iniciado.")
-print("Bot de Telegram iniciado.")
-print("Ambos servicios están funcionando.")
-
-try:
-    while True:
-        if app.poll() is not None:
-            print("El servidor Flask se ha detenido.")
-            break
-
-        if bot.poll() is not None:
-            print("El bot de Telegram se ha detenido.")
-            break
-
+    try:
+        iniciar("Servidor Flask", "app.py")
         time.sleep(2)
 
-except KeyboardInterrupt:
-    print("\nCerrando el sistema...")
+        iniciar("Bot de Telegram", "bot.py")
+        time.sleep(2)
 
-finally:
-    app.terminate()
-    bot.terminate()
+        iniciar("Panel de escritorio", "escritorio.py")
 
-    app.wait()
-    bot.wait()
+        print("Sistema completo funcionando.")
 
-    print("Sistema detenido.")
+        while True:
+            for nombre, proceso in procesos:
+                if proceso.poll() is not None:
+                    raise RuntimeError(f"{nombre} se ha detenido.")
+
+            time.sleep(2)
+
+    except KeyboardInterrupt:
+        print("\nCerrando sistema...")
+
+    except RuntimeError as error:
+        print(error)
+
+    finally:
+        for nombre, proceso in reversed(procesos):
+            if proceso.poll() is None:
+                proceso.terminate()
+
+        for nombre, proceso in reversed(procesos):
+            proceso.wait()
+
+        print("Sistema detenido.")

@@ -1,6 +1,5 @@
+
 import socket
-import subprocess
-import sys
 import threading
 import time
 
@@ -11,23 +10,37 @@ PUERTO = 5001
 
 
 def iniciar_flask():
-    app.run(host="127.0.0.1", port=PUERTO, debug=False, use_reloader=False)
+    app.run(
+        host="127.0.0.1",
+        port=PUERTO,
+        debug=False,
+        use_reloader=False
+    )
 
 
 def esperar_servidor():
     for _ in range(50):
         try:
-            with socket.create_connection(("127.0.0.1", PUERTO), timeout=0.5):
-                return
+            with socket.create_connection(
+                ("127.0.0.1", PUERTO),
+                timeout=0.5
+            ):
+                return True
         except OSError:
             time.sleep(0.2)
 
+    return False
+
 
 if __name__ == "__main__":
-    bot = subprocess.Popen([sys.executable, "bot.py"])  # el bot de Telegram sigue corriendo
+    threading.Thread(
+        target=iniciar_flask,
+        daemon=True
+    ).start()
 
-    threading.Thread(target=iniciar_flask, daemon=True).start()
-    esperar_servidor()
+    if not esperar_servidor():
+        print("No se pudo iniciar el servidor Flask.")
+        raise SystemExit(1)
 
     webview.create_window(
         "Panel Administrador",
@@ -35,6 +48,5 @@ if __name__ == "__main__":
         width=1200,
         height=800,
     )
-    webview.start()  # se queda aquí hasta que cierres la ventana
 
-    bot.terminate()  # al cerrar la ventana, también se apaga el bot
+    webview.start()
