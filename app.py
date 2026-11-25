@@ -36,6 +36,7 @@ app.register_blueprint(auth_api)
 app.register_blueprint(credenciales_api)
 
 
+
 print("\n===== RUTAS DEL ADMIN =====")
 for ruta in app.url_map.iter_rules():
     if "admin" in ruta.endpoint:
