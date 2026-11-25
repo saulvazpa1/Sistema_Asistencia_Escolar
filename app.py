@@ -2,6 +2,7 @@
 from flask import Flask, request, render_template
 import psycopg
 import os
+from api.app_alumnos import app_alumnos_api
 
 from dotenv import load_dotenv
 from flask_jwt_extended import JWTManager
@@ -35,6 +36,7 @@ app.register_blueprint(tutores_api)
 app.register_blueprint(auth_api)
 app.register_blueprint(credenciales_api)
 
+app.register_blueprint(app_alumnos_api)
 
 
 print("\n===== RUTAS DEL ADMIN =====")

@@ -46,7 +46,11 @@ class Student {
     }
   }
 
-  Student copyWith({String? fotoBase64, bool? credencialActiva}) => Student(
+  Student copyWith({
+    String? fotoBase64,
+    bool? credencialActiva,
+    bool? telegramVinculado,
+  }) => Student(
     matricula: matricula,
     nombreCompleto: nombreCompleto,
     curp: curp,
@@ -55,7 +59,7 @@ class Student {
     fotoUrl: fotoUrl,
     fotoBase64: fotoBase64 ?? this.fotoBase64,
     credencialActiva: credencialActiva ?? this.credencialActiva,
-    telegramVinculado: telegramVinculado,
+    telegramVinculado: telegramVinculado ?? this.telegramVinculado,
   );
 
   /// Copia del alumno con una fotografía nueva (guardada embebida en base64).

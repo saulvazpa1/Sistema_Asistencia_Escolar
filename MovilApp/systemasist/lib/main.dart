@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
@@ -48,12 +51,15 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
   Future<void> _restoreSession() async {
     // La lectura cifrada y el tiempo mínimo del splash corren en paralelo.
     final results = await Future.wait<Object?>([
-      _storage.loadSession(),
+      _storage.loadSession().timeout(
+        const Duration(seconds: 4),
+        onTimeout: () => null,
+      ),
       Future<void>.delayed(AppConfig.splashMinDuration),
     ]);
     final session = results.first as AuthSession?;
-    if (session != null)
-      await _hce.sync(session); // re-sincroniza la copia del servicio HCE
+    // Re-sincroniza la copia del servicio HCE SIN bloquear el arranque.
+    if (session != null) unawaited(_hce.sync(session));
     if (!mounted) return;
     setState(() {
       _session = session;
@@ -83,6 +89,10 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
     setState(() => _session = updated);
   }
 
+  /// Revisa con el servidor que la credencial siga vigente y ligada a este teléfono.
+  /// - 401: la cuenta se abrió en otro teléfono (o expiró) -> cierra sesión aquí.
+  /// - Dado de baja: marca la credencial inactiva y apaga la respuesta HCE.
+  /// - Sin red u otro error: se ignora (la credencial sigue funcionando sin conexión).
   Future<void> _refreshCredentialStatus() async {
     final current = _session;
     if (current == null) return;
@@ -94,11 +104,17 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
     _lastStatusCheck = now;
 
     try {
-      final active = await _authService.credentialIsActive(current);
-      if (active == current.student.credencialActiva) return;
+      final status = await _authService.credentialStatus(current);
+      if (status.activa == current.student.credencialActiva &&
+          status.telegramVinculado == current.student.telegramVinculado) {
+        return;
+      }
 
       final updated = current.copyWith(
-        student: current.student.copyWith(credencialActiva: active),
+        student: current.student.copyWith(
+          credencialActiva: status.activa,
+          telegramVinculado: status.telegramVinculado,
+        ),
       );
       await _storage.saveSession(updated);
       await _hce.sync(updated);
@@ -113,8 +129,13 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
   }
 
   Future<void> _handleLogout() async {
-    await _hce.clear(); // el lector de la puerta deja de recibir la credencial
-    await _storage.clear();
+    unawaited(
+      _hce.clear(),
+    ); // el lector de la puerta deja de recibir la credencial
+    await _storage.clear().timeout(
+      const Duration(seconds: 4),
+      onTimeout: () {},
+    );
     if (!mounted) return;
     setState(() => _session = null);
   }
@@ -129,7 +150,6 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
     } else if (session == null) {
       home = LoginScreen(
         authService: _authService,
-
         onLoggedIn: _handleLoggedIn,
         notice: _loginNotice,
       );

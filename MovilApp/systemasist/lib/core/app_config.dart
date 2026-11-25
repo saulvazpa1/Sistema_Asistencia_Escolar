@@ -1,9 +1,15 @@
 import 'package:flutter/foundation.dart';
 
+/// Configuración central de la app.
+///
+/// Se ajusta en tiempo de compilación con `--dart-define`:
+///   flutter run --dart-define=USE_MOCK=false --dart-define=API_BASE_URL=http://127.0.0.1:5000/api/app
+///
+/// Por defecto: simulación (mock) en debug/profile y backend real en release.
 abstract final class AppConfig {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://api.nexoescolar.example/v1',
+    defaultValue: 'http://127.0.0.1:5001/api/app',
   );
 
   static const bool useMock = bool.fromEnvironment(
@@ -23,6 +29,11 @@ abstract final class AppConfig {
   /// Cuánto tiempo se muestra "Acceso registrado" antes de volver a reposo.
   static const Duration successResetDelay = Duration(seconds: 5);
 
+  /// En Android la sesión NFC (modo LECTOR de etiquetas) arranca sola al abrir la credencial.
+  /// En iOS siempre es manual (iOS muestra una hoja del sistema al iniciar).
+  ///
+  /// IMPORTANTE: el modo lector apaga la emulación de tarjeta (HCE). Con lector de puerta
+  /// (HCE) debe ser `false`; ponlo en `true` solo si usas únicamente etiquetas NFC en la pared.
   static const bool autoStartScanOnAndroid = false;
 
   /// Vigencia (segundos) del código QR de respaldo antes de regenerarse.
@@ -42,7 +53,8 @@ abstract final class AppConfig {
     if (kReleaseMode && useMock) {
       throw StateError('USE_MOCK=true no está permitido en release.');
     }
-    if (!useMock && !baseUrl.startsWith('https://')) {
+    // En release exige HTTPS; en pruebas (debug) se permite http:// hacia tu PC.
+    if (kReleaseMode && !useMock && !baseUrl.startsWith('https://')) {
       throw StateError('API_BASE_URL debe usar HTTPS.');
     }
   }

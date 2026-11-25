@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -66,6 +68,7 @@ class HceStatus {
 class HceService {
   const HceService();
 
+  static const Duration _nativeTimeout = Duration(seconds: 3);
   static const MethodChannel _channel = MethodChannel(
     'mx.edu.utt.nexoescolar/hce',
   );
@@ -90,11 +93,13 @@ class HceService {
   Future<bool> sync(AuthSession session) async {
     if (!_isAndroid) return true;
     try {
-      return await _channel.invokeMethod<bool>('setCredential', {
-            'uid': session.uid,
-            'token': session.signingKey, // llave de firma = SHA-256(token)
-            'active': session.student.credencialActiva,
-          }) ??
+      return await _channel
+              .invokeMethod<bool>('setCredential', {
+                'uid': session.uid,
+                'token': session.signingKey, // llave de firma = SHA-256(token)
+                'active': session.student.credencialActiva,
+              })
+              .timeout(_nativeTimeout, onTimeout: () => false) ??
           false;
     } on PlatformException catch (e) {
       debugPrint('HceService.sync falló: $e');
@@ -111,7 +116,9 @@ class HceService {
   Future<void> clear() async {
     if (!_isAndroid) return;
     try {
-      await _channel.invokeMethod<bool>('clear');
+      await _channel
+          .invokeMethod<bool>('clear')
+          .timeout(_nativeTimeout, onTimeout: () => null);
     } on PlatformException catch (e) {
       debugPrint('HceService.clear falló: $e');
     } on MissingPluginException {
@@ -123,7 +130,9 @@ class HceService {
   Future<HceStatus> status() async {
     if (!_isAndroid) return const HceStatus();
     try {
-      final raw = await _channel.invokeMethod<Map<Object?, Object?>>('status');
+      final raw = await _channel
+          .invokeMethod<Map<Object?, Object?>>('status')
+          .timeout(_nativeTimeout, onTimeout: () => null);
       return raw == null
           ? const HceStatus(nativeMissing: true)
           : HceStatus.fromMap(raw);

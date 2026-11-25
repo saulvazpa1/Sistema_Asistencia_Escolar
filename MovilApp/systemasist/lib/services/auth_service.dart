@@ -13,6 +13,38 @@ class AuthService {
 
   final http.Client _client;
 
+  Future<CredentialStatus> credentialStatus(AuthSession session) async {
+    if (AppConfig.useMock) {
+      return const CredentialStatus(activa: true, telegramVinculado: true);
+    }
+
+    final response = await guardedRequest(
+      () => _client.get(
+        Uri.parse('${AppConfig.baseUrl}/credencial/estado'),
+        headers: {...jsonHeaders, 'Authorization': 'Bearer ${session.token}'},
+      ),
+    );
+
+    if (response.statusCode == 401) {
+      throw const SessionExpiredException();
+    }
+
+    if (response.statusCode != 200) {
+      throw apiErrorFromResponse(response);
+    }
+
+    final json = decodeJsonObject(response);
+
+    if (json == null) {
+      throw const ApiException('Respuesta inválida del servidor.');
+    }
+
+    return CredentialStatus(
+      activa: json['activa'] as bool? ?? false,
+      telegramVinculado: json['telegramVinculado'] as bool? ?? false,
+    );
+  }
+
   Future<AuthSession> login({
     required String matricula,
     required String password,
@@ -98,4 +130,14 @@ class AuthService {
       ),
     );
   }
+}
+
+class CredentialStatus {
+  final bool activa;
+  final bool telegramVinculado;
+
+  const CredentialStatus({
+    required this.activa,
+    required this.telegramVinculado,
+  });
 }
