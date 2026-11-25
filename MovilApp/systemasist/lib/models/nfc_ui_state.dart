@@ -31,56 +31,56 @@ class NfcUiState {
   final bool canRetry;
 
   const NfcUiState.checking()
-    : this._(phase: NfcPhase.checking, title: 'Verificando NFC…');
+      : this._(phase: NfcPhase.checking, title: 'Verificando NFC…');
 
   const NfcUiState.unsupported()
-    : this._(
-        phase: NfcPhase.unsupported,
-        title: 'Este dispositivo no tiene NFC',
-        detail: 'Muestra el código QR de respaldo en la entrada.',
-      );
+      : this._(
+          phase: NfcPhase.unsupported,
+          title: 'Este dispositivo no tiene NFC',
+          detail: 'Muestra el código QR de respaldo en la entrada.',
+        );
 
   const NfcUiState.disabled()
-    : this._(
-        phase: NfcPhase.disabled,
-        title: 'NFC desactivado',
-        detail: 'Actívalo en los ajustes para registrar tu acceso.',
-      );
+      : this._(
+          phase: NfcPhase.disabled,
+          title: 'NFC desactivado',
+          detail: 'Actívalo en los ajustes para registrar tu acceso.',
+        );
 
-  const NfcUiState.idle({String? detail})
-    : this._(
-        phase: NfcPhase.idle,
-        title: 'Listo para registrar',
-        detail: detail ?? 'Toca el botón y acerca tu teléfono al lector.',
-      );
+  const NfcUiState.idle({String? detail, String? title})
+      : this._(
+          phase: NfcPhase.idle,
+          title: title ?? 'Listo para registrar',
+          detail: detail ?? 'Toca el botón y acerca tu teléfono al lector.',
+        );
 
   const NfcUiState.waiting()
-    : this._(
-        phase: NfcPhase.waiting,
-        title: 'Acerque al lector',
-        detail: 'Mantén el teléfono junto al punto de acceso.',
-      );
+      : this._(
+          phase: NfcPhase.waiting,
+          title: 'Acerque al lector',
+          detail: 'Mantén el teléfono junto al punto de acceso.',
+        );
 
   const NfcUiState.sending()
-    : this._(
-        phase: NfcPhase.sending,
-        title: 'Transmitiendo ID…',
-        detail: 'No alejes el teléfono.',
-      );
+      : this._(
+          phase: NfcPhase.sending,
+          title: 'Transmitiendo ID…',
+          detail: 'No alejes el teléfono.',
+        );
 
   NfcUiState.success(AccessResult r)
-    : this._(
-        phase: NfcPhase.success,
-        title: 'Acceso registrado',
-        detail: r.mensaje,
-        result: r,
-      );
+      : this._(
+          phase: NfcPhase.success,
+          title: 'Acceso registrado',
+          detail: r.mensaje,
+          result: r,
+        );
 
   const NfcUiState.error(String message, {bool canRetry = false})
-    : this._(
-        phase: NfcPhase.error,
-        title: 'No se pudo registrar',
-        detail: message,
-        canRetry: canRetry,
-      );
+      : this._(
+          phase: NfcPhase.error,
+          title: 'No se pudo registrar',
+          detail: message,
+          canRetry: canRetry,
+        );
 }

@@ -23,11 +23,6 @@ abstract final class AppConfig {
   /// Cuánto tiempo se muestra "Acceso registrado" antes de volver a reposo.
   static const Duration successResetDelay = Duration(seconds: 5);
 
-  /// En Android la sesión NFC (modo LECTOR de etiquetas) arranca sola al abrir la credencial.
-  /// En iOS siempre es manual (iOS muestra una hoja del sistema al iniciar).
-  ///
-  /// IMPORTANTE: el modo lector apaga la emulación de tarjeta (HCE). Con lector de puerta
-  /// (HCE) debe ser `false`; ponlo en `true` solo si usas únicamente etiquetas NFC en la pared.
   static const bool autoStartScanOnAndroid = false;
 
   /// Vigencia (segundos) del código QR de respaldo antes de regenerarse.

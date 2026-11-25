@@ -1,14 +1,13 @@
-import 'dart:typed_data';
-
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import 'core/app_config.dart';
+import 'core/app_exceptions.dart';
 import 'core/app_theme.dart';
 import 'models/auth_session.dart';
 import 'screens/digital_id_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/spashScreen.dart';
+import 'screens/splash_screen.dart';
 import 'services/access_service.dart';
 import 'services/auth_service.dart';
 import 'services/hce_service.dart';
@@ -36,6 +35,8 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
 
   AuthSession? _session;
   bool _booting = true;
+  String? _loginNotice;
+  DateTime? _lastStatusCheck;
 
   @override
   void initState() {
@@ -51,9 +52,8 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
       Future<void>.delayed(AppConfig.splashMinDuration),
     ]);
     final session = results.first as AuthSession?;
-    if (session != null) {
+    if (session != null)
       await _hce.sync(session); // re-sincroniza la copia del servicio HCE
-    }
     if (!mounted) return;
     setState(() {
       _session = session;
@@ -67,7 +67,10 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
     ); // si falla, LoginScreen muestra el error
     await _hce.sync(session);
     if (!mounted) return;
-    setState(() => _session = session);
+    setState(() {
+      _session = session;
+      _loginNotice = null;
+    });
   }
 
   /// Guarda la foto nueva (cifrada junto con la sesión) y actualiza la credencial en pantalla.
@@ -78,6 +81,35 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
     await _storage.saveSession(updated);
     if (!mounted) return;
     setState(() => _session = updated);
+  }
+
+  Future<void> _refreshCredentialStatus() async {
+    final current = _session;
+    if (current == null) return;
+
+    final last = _lastStatusCheck;
+    final now = DateTime.now();
+    if (last != null && now.difference(last) < const Duration(seconds: 60))
+      return;
+    _lastStatusCheck = now;
+
+    try {
+      final active = await _authService.credentialIsActive(current);
+      if (active == current.student.credencialActiva) return;
+
+      final updated = current.copyWith(
+        student: current.student.copyWith(credencialActiva: active),
+      );
+      await _storage.saveSession(updated);
+      await _hce.sync(updated);
+      if (!mounted) return;
+      setState(() => _session = updated);
+    } on SessionExpiredException catch (e) {
+      _loginNotice = e.message;
+      await _handleLogout();
+    } on ApiException {
+      // Sin conexión o servidor caído: no se toca la credencial local.
+    }
   }
 
   Future<void> _handleLogout() async {
@@ -97,7 +129,9 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
     } else if (session == null) {
       home = LoginScreen(
         authService: _authService,
+
         onLoggedIn: _handleLoggedIn,
+        notice: _loginNotice,
       );
     } else {
       home = DigitalIdScreen(
@@ -106,6 +140,7 @@ class _NexoEscolarAppState extends State<NexoEscolarApp> {
         accessService: _accessService,
         onLogout: _handleLogout,
         onPhotoChanged: _handlePhotoChanged,
+        onRefreshStatus: _refreshCredentialStatus,
       );
     }
 

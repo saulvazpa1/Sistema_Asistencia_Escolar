@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import '../core/app_exceptions.dart';
@@ -13,12 +13,16 @@ class LoginScreen extends StatefulWidget {
     super.key,
     required this.authService,
     required this.onLoggedIn,
+    this.notice,
   });
 
   final AuthService authService;
 
   /// El padre persiste la sesión cifrada y navega a la credencial.
   final Future<void> Function(AuthSession session) onLoggedIn;
+
+  /// Mensaje inicial (p. ej. "tu cuenta se abrió en otro teléfono").
+  final String? notice;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -35,6 +39,12 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
 
   static final RegExp _matriculaRegExp = RegExp(r'^[A-Za-z0-9]{6,20}$');
+
+  @override
+  void initState() {
+    super.initState();
+    _error = widget.notice;
+  }
 
   @override
   void dispose() {
@@ -65,9 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on ApiException catch (e) {
       _showError(e.message);
     } catch (_) {
-      _showError(
-        'No se pudo guardar la sesión de forma segura. Intenta de nuevo.',
-      );
+      _showError('No se pudo guardar la sesión de forma segura. Intenta de nuevo.');
     }
   }
 
@@ -145,14 +153,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         enabled: !_loading,
                         style: const TextStyle(color: Colors.white),
                         textCapitalization: TextCapitalization.characters,
-                        keyboardType:
-                            TextInputType.visiblePassword, // sin autocorrección
+                        keyboardType: TextInputType.visiblePassword, // sin autocorrección
                         textInputAction: TextInputAction.next,
                         autofillHints: const [AutofillHints.username],
                         inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'[A-Za-z0-9]'),
-                          ),
+                          FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
                           LengthLimitingTextInputFormatter(20),
                         ],
                         decoration: _decoration(
@@ -190,17 +195,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           hint: '••••••••',
                           icon: Icons.lock,
                           suffix: IconButton(
-                            tooltip: _obscure
-                                ? 'Mostrar contraseña'
-                                : 'Ocultar contraseña',
+                            tooltip: _obscure ? 'Mostrar contraseña' : 'Ocultar contraseña',
                             icon: Icon(
-                              _obscure
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
+                              _obscure ? Icons.visibility : Icons.visibility_off,
                               color: NexoColors.fieldHint,
                             ),
-                            onPressed: () =>
-                                setState(() => _obscure = !_obscure),
+                            onPressed: () => setState(() => _obscure = !_obscure),
                           ),
                         ),
                         onFieldSubmitted: (_) => _submit(),
@@ -221,10 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: Row(
                               children: [
-                                const Icon(
-                                  Icons.error_outline,
-                                  color: NexoColors.errorText,
-                                ),
+                                const Icon(Icons.error_outline, color: NexoColors.errorText),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(

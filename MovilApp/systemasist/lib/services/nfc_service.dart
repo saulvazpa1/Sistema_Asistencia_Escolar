@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -27,7 +26,7 @@ import 'access_service.dart';
 /// La UI solo escucha [state].
 class NfcService {
   NfcService({required AccessService accessService, this.hceMode = false})
-    : _access = accessService;
+      : _access = accessService;
 
   final AccessService _access;
 
@@ -36,13 +35,13 @@ class NfcService {
   final bool hceMode;
 
   NfcUiState _idle() => NfcUiState.idle(
-    detail: hceMode ? 'Acerca tu teléfono al lector de la puerta.' : null,
-  );
+        title: hceMode ? 'Teléfono listo como tarjeta' : null,
+        detail: hceMode ? 'Acerca tu teléfono al lector de la puerta.' : null,
+      );
 
   /// Estado observable para la UI.
-  final ValueNotifier<NfcUiState> state = ValueNotifier<NfcUiState>(
-    const NfcUiState.checking(),
-  );
+  final ValueNotifier<NfcUiState> state =
+      ValueNotifier<NfcUiState>(const NfcUiState.checking());
 
   /// Se invoca cuando el servidor responde 401 (token inválido).
   VoidCallback? onSessionExpired;
@@ -105,6 +104,8 @@ class NfcService {
   /// Abre la sesión NFC y queda a la espera de la etiqueta del punto de acceso.
   Future<void> startScan(AuthSession session) async {
     _session = session;
+    // En modo tarjeta (HCE) NUNCA se abre el modo lector: apagaría la emulación de tarjeta.
+    if (hceMode) return;
     if (_disposed || _busy || _sessionActive) return;
 
     _successReset?.cancel();
@@ -124,9 +125,7 @@ class NfcService {
     } catch (e) {
       debugPrint('NfcService.startSession falló: $e');
       _sessionActive = false;
-      _emit(
-        const NfcUiState.error('No se pudo iniciar el NFC. Intenta de nuevo.'),
-      );
+      _emit(const NfcUiState.error('No se pudo iniciar el NFC. Intenta de nuevo.'));
     }
   }
 
@@ -161,16 +160,13 @@ class NfcService {
   // ---------------------------------------------------------------------------
 
   Future<void> _onDiscovered(NfcTag tag) async {
-    if (_disposed || _busy)
-      return; // Android puede disparar varias veces seguidas
+    if (_disposed || _busy) return; // Android puede disparar varias veces seguidas
     _busy = true;
     _scanTimeout?.cancel();
 
     final point = await _extractPoint(tag);
     if (point == null) {
-      await _fail(
-        'Etiqueta no reconocida. Acerca el teléfono al punto de acceso.',
-      );
+      await _fail('Etiqueta no reconocida. Acerca el teléfono al punto de acceso.');
       return;
     }
     _lastPoint = point;
@@ -236,9 +232,7 @@ class NfcService {
         }
       } catch (e) {
         debugPrint('NfcService._send error inesperado: $e');
-        lastError = const ApiException(
-          'Error inesperado al registrar el acceso.',
-        );
+        lastError = const ApiException('Error inesperado al registrar el acceso.');
         break;
       }
     }
@@ -264,11 +258,9 @@ class NfcService {
     _scanTimeout = Timer(AppConfig.scanTimeout, () async {
       if (_disposed || _busy) return;
       await _closeSession();
-      _emit(
-        const NfcUiState.idle(
-          detail: 'Tiempo agotado. Toca el botón para intentar de nuevo.',
-        ),
-      );
+      _emit(const NfcUiState.idle(
+        detail: 'Tiempo agotado. Toca el botón para intentar de nuevo.',
+      ));
     });
   }
 
@@ -318,8 +310,7 @@ class NfcService {
             message = ndef.cachedNdefMessage ?? await ndef.getNdefMessage();
           }
         case TargetPlatform.iOS:
-          uid =
-              MiFareIos.from(tag)?.identifier ??
+          uid = MiFareIos.from(tag)?.identifier ??
               Iso7816Ios.from(tag)?.identifier ??
               Iso15693Ios.from(tag)?.identifier;
           message = NdefIos.from(tag)?.cachedNdefMessage;
@@ -332,10 +323,7 @@ class NfcService {
 
     final uidHex = uid == null
         ? ''
-        : uid
-              .map((b) => b.toRadixString(16).padLeft(2, '0'))
-              .join()
-              .toUpperCase();
+        : uid.map((b) => b.toRadixString(16).padLeft(2, '0')).join().toUpperCase();
     final ndefId = _pointIdFromNdef(message);
     final pointId = ndefId ?? uidHex;
     if (pointId.isEmpty) return null;
@@ -376,12 +364,9 @@ class NfcService {
               .trim();
           if (text.isNotEmpty) return text;
         case 0x55: // 'U' - URI: [prefijo][resto]
-          final prefix = payload[0] < _uriPrefixes.length
-              ? _uriPrefixes[payload[0]]
-              : '';
-          final uri = utf8
-              .decode(payload.sublist(1), allowMalformed: true)
-              .trim();
+          final prefix =
+              payload[0] < _uriPrefixes.length ? _uriPrefixes[payload[0]] : '';
+          final uri = utf8.decode(payload.sublist(1), allowMalformed: true).trim();
           if (uri.isNotEmpty) return '$prefix$uri';
       }
     }

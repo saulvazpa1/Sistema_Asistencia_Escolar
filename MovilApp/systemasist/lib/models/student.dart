@@ -46,18 +46,21 @@ class Student {
     }
   }
 
-  /// Copia del alumno con una fotografía nueva (guardada embebida en base64).
-  Student withPhoto(Uint8List bytes) => Student(
+  Student copyWith({String? fotoBase64, bool? credencialActiva}) => Student(
     matricula: matricula,
     nombreCompleto: nombreCompleto,
     curp: curp,
     carrera: carrera,
     grupo: grupo,
     fotoUrl: fotoUrl,
-    fotoBase64: base64Encode(bytes),
-    credencialActiva: credencialActiva,
+    fotoBase64: fotoBase64 ?? this.fotoBase64,
+    credencialActiva: credencialActiva ?? this.credencialActiva,
     telegramVinculado: telegramVinculado,
   );
+
+  /// Copia del alumno con una fotografía nueva (guardada embebida en base64).
+  Student withPhoto(Uint8List bytes) =>
+      copyWith(fotoBase64: base64Encode(bytes));
 
   factory Student.fromJson(Map<String, dynamic> json) {
     return Student(

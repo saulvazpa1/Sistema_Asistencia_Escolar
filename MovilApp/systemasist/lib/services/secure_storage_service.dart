@@ -5,16 +5,21 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../models/auth_session.dart';
 
+/// Almacenamiento cifrado de la sesión del alumno.
+///
+/// - Android: EncryptedSharedPreferences respaldado por Android Keystore.
+/// - iOS: Keychain (accesible tras el primer desbloqueo, sin migrar a otros equipos).
+///
+/// Se cifra TODO (token, UID y datos del alumno, que incluyen CURP).
 class SecureStorageService {
   SecureStorageService({FlutterSecureStorage? storage})
-    : _storage =
-          storage ??
-          const FlutterSecureStorage(
-            aOptions: AndroidOptions(encryptedSharedPreferences: true),
-            iOptions: IOSOptions(
-              accessibility: KeychainAccessibility.first_unlock_this_device,
-            ),
-          );
+      : _storage = storage ??
+            const FlutterSecureStorage(
+              aOptions: AndroidOptions(),
+              iOptions: IOSOptions(
+                accessibility: KeychainAccessibility.first_unlock_this_device,
+              ),
+            );
 
   final FlutterSecureStorage _storage;
 
@@ -33,6 +38,9 @@ class SecureStorageService {
     ]);
   }
 
+  /// Devuelve la sesión guardada o `null` si no existe / está corrupta.
+  /// Ante un error de descifrado (Keystore invalidado, restauración de backup...)
+  /// limpia el almacenamiento para no quedar en un estado inconsistente.
   Future<AuthSession?> loadSession() async {
     try {
       final token = await _storage.read(key: _kToken);

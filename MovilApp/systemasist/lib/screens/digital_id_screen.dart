@@ -1,8 +1,7 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:image_picker/image_picker.dart' show ImageSource;
 
 import '../core/app_config.dart';
@@ -11,8 +10,10 @@ import '../models/auth_session.dart';
 import '../models/nfc_ui_state.dart';
 import '../models/student.dart';
 import '../services/access_service.dart';
+import '../services/hce_service.dart';
 import '../services/nfc_service.dart';
 import '../services/photo_service.dart';
+import '../widgets/hce_status_card.dart';
 import '../widgets/nexo_logo.dart';
 import '../widgets/nfc_status_banner.dart';
 import '../widgets/nfc_transmit_panel.dart';
@@ -27,6 +28,7 @@ class DigitalIdScreen extends StatefulWidget {
     required this.accessService,
     required this.onLogout,
     required this.onPhotoChanged,
+    required this.onRefreshStatus,
   });
 
   final AuthSession session;
@@ -38,6 +40,9 @@ class DigitalIdScreen extends StatefulWidget {
   /// El padre guarda la foto nueva y reconstruye la credencial.
   final Future<void> Function(Uint8List bytes) onPhotoChanged;
 
+  /// Verifica con el servidor que la credencial siga vigente y ligada a este teléfono.
+  final Future<void> Function() onRefreshStatus;
+
   @override
   State<DigitalIdScreen> createState() => _DigitalIdScreenState();
 }
@@ -47,6 +52,10 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
   late final NfcService _nfc;
   final _photoService = PhotoService();
   bool _disabledDialogShown = false;
+  final _hce = const HceService();
+  final ValueNotifier<HceStatus?> _hceStatus = ValueNotifier<HceStatus?>(null);
+  Timer? _hceTimer;
+  bool _foreground = true;
 
   Student get _student => widget.session.student;
 
@@ -63,15 +72,41 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
     _nfc = NfcService(accessService: widget.accessService, hceMode: _hceMode)
       ..onSessionExpired = _handleSessionExpired;
     unawaited(_bootNfc());
+    unawaited(widget.onRefreshStatus());
+    if (_hceMode) {
+      unawaited(_refreshHce());
+      _hceTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+        if (_foreground) unawaited(_refreshHce());
+      });
+    }
+  }
+
+  /// Lee el estado nativo y, si la credencial no está (o no coincide) en el servicio HCE,
+  /// la vuelve a guardar: así la tarjeta se repara sola.
+  Future<void> _refreshHce() async {
+    var status = await _hce.status();
+    if (!mounted) return;
+    final session = widget.session;
+    final needsSync = !status.nativeMissing &&
+        (!status.hasCredential ||
+            status.uid != session.uid ||
+            status.active != session.student.credencialActiva);
+    if (needsSync) {
+      await _hce.sync(session);
+      status = await _hce.status();
+      if (!mounted) return;
+    }
+    _hceStatus.value = status;
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _hceTimer?.cancel();
+    _hceStatus.dispose();
     _nfc.dispose(); // cierra la sesión NFC y libera timers / notifier
     super.dispose();
   }
@@ -80,14 +115,14 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
+    _foreground = lifecycle == AppLifecycleState.resumed;
     switch (lifecycle) {
       case AppLifecycleState.resumed:
         unawaited(_onResumed());
+        if (_hceMode) unawaited(_refreshHce());
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
-        unawaited(
-          _nfc.cancel(),
-        ); // nunca dejar la sesión NFC abierta en segundo plano
+        unawaited(_nfc.cancel()); // nunca dejar la sesión NFC abierta en segundo plano
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:
         break;
@@ -108,6 +143,7 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
 
   /// Al volver de los ajustes el usuario pudo haber activado el NFC.
   Future<void> _onResumed() async {
+    unawaited(widget.onRefreshStatus());
     await _nfc.refreshAvailability();
     if (!mounted) return;
     final phase = _nfc.state.value.phase;
@@ -119,9 +155,7 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
   void _handleSessionExpired() {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Tu sesión expiró. Inicia sesión de nuevo.'),
-      ),
+      const SnackBar(content: Text('Tu sesión expiró. Inicia sesión de nuevo.')),
     );
     unawaited(widget.onLogout());
   }
@@ -186,6 +220,7 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
     return showPropertiesDialog(
       context,
       student: _student,
+      credentialId: widget.session.uid,
       nfcState: _nfc.state.value,
       onLogout: widget.onLogout,
     );
@@ -216,10 +251,7 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
                             padding: EdgeInsets.only(bottom: 10),
                             child: Text(
                               'Escanea tu credencial',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                              ),
+                              style: TextStyle(color: Colors.white, fontSize: 20),
                             ),
                           ),
                           _CredentialCard(
@@ -235,14 +267,17 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
                             onCancel: () => unawaited(_nfc.cancel()),
                             onRetry: _retry,
                           ),
+                          if (_hceMode)
+                            ValueListenableBuilder<HceStatus?>(
+                              valueListenable: _hceStatus,
+                              builder: (context, status, _) =>
+                                  HceStatusCard(status: status),
+                            ),
                           const SizedBox(height: 8),
                           TextButton.icon(
                             onPressed: () =>
                                 showQrBackupDialog(context, widget.session),
-                            icon: const Icon(
-                              Icons.qr_code_2,
-                              color: Colors.white70,
-                            ),
+                            icon: const Icon(Icons.qr_code_2, color: Colors.white70),
                             label: const Text(
                               'Mostrar código QR de respaldo',
                               style: TextStyle(color: Colors.white70),
@@ -324,9 +359,7 @@ class _CredentialCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: _Photo(student: student, onAddPhoto: onAddPhoto),
-          ),
+          Center(child: _Photo(student: student, onAddPhoto: onAddPhoto)),
           const SizedBox(height: 10),
           Center(
             child: Text(
@@ -356,10 +389,7 @@ class _CredentialCard extends StatelessWidget {
               child: const Text(
                 'CREDENCIAL INACTIVA',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
               ),
             ),
           ],
@@ -409,7 +439,11 @@ class _Photo extends StatelessWidget {
             top: 0,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
-              child: SizedBox(width: _width, height: _height, child: _image()),
+              child: SizedBox(
+                width: _width,
+                height: _height,
+                child: _image(),
+              ),
             ),
           ),
           Positioned(

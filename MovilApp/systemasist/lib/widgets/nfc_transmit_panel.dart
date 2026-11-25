@@ -1,23 +1,26 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/app_theme.dart';
 import '../models/nfc_ui_state.dart';
 import 'nfc_status_banner.dart';
 
-// ------------ Panel de estado NFC en tiempo real ---------
+/// Panel de estado NFC en tiempo real: "Acerque al lector" -> "Transmitiendo ID…" -> "Acceso registrado".
 class NfcTransmitPanel extends StatelessWidget {
   const NfcTransmitPanel({
     super.key,
     required this.state,
     required this.credentialActive,
+    required this.hceMode,
     required this.onStart,
     required this.onCancel,
     required this.onRetry,
-    required bool hceMode,
   });
 
   final NfcUiState state;
   final bool credentialActive;
+
+  /// Con HCE, el botón es solo para leer una etiqueta fija (modo lector).
+  final bool hceMode;
   final VoidCallback onStart;
   final VoidCallback onCancel;
   final VoidCallback onRetry;
@@ -38,9 +41,7 @@ class NfcTransmitPanel extends StatelessWidget {
         children: [
           SizedBox(
             height: 84,
-            child: Center(
-              child: _StatusIcon(phase: state.phase, color: accent),
-            ),
+            child: Center(child: _StatusIcon(phase: state.phase, color: accent)),
           ),
           const SizedBox(height: 12),
           // liveRegion: los lectores de pantalla anuncian cada cambio de estado.
@@ -65,10 +66,7 @@ class NfcTransmitPanel extends StatelessWidget {
                     Text(
                       state.detail!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
+                      style: const TextStyle(color: Colors.white70, fontSize: 14),
                     ),
                   ],
                 ],
@@ -93,23 +91,22 @@ class NfcTransmitPanel extends StatelessWidget {
 
     switch (state.phase) {
       case NfcPhase.idle:
+        // Con HCE NO hay botón: pulsarlo abriría el modo lector y apagaría la tarjeta.
+        if (hceMode) return const SizedBox.shrink();
         return FilledButton.icon(
           onPressed: onStart,
           icon: const Icon(Icons.nfc),
-          label: const Text('Registrar acceso por NFC'),
+          label: Text(
+            'Registrar acceso por NFC',
+          ),
         );
       case NfcPhase.waiting:
-        return OutlinedButton(
-          onPressed: onCancel,
-          child: const Text('Cancelar'),
-        );
+        return OutlinedButton(onPressed: onCancel, child: const Text('Cancelar'));
       case NfcPhase.error:
         return FilledButton.icon(
           onPressed: onRetry,
           icon: const Icon(Icons.refresh),
-          label: Text(
-            state.canRetry ? 'Reintentar envío' : 'Intentar de nuevo',
-          ),
+          label: Text(state.canRetry ? 'Reintentar envío' : 'Intentar de nuevo'),
         );
       case NfcPhase.disabled:
         return FilledButton.icon(
@@ -126,11 +123,11 @@ class NfcTransmitPanel extends StatelessWidget {
   }
 
   static Color _accentFor(NfcPhase phase) => switch (phase) {
-    NfcPhase.success => NexoColors.green,
-    NfcPhase.error => NexoColors.errorText,
-    NfcPhase.disabled || NfcPhase.unsupported => NexoColors.warning,
-    _ => NexoColors.fieldBorder,
-  };
+        NfcPhase.success => NexoColors.green,
+        NfcPhase.error => NexoColors.errorText,
+        NfcPhase.disabled || NfcPhase.unsupported => NexoColors.warning,
+        _ => NexoColors.fieldBorder,
+      };
 }
 
 class _StatusIcon extends StatelessWidget {
@@ -149,10 +146,7 @@ class _StatusIcon extends StatelessWidget {
         return SizedBox(
           width: 52,
           height: 52,
-          child: CircularProgressIndicator(
-            strokeWidth: 4,
-            color: NexoColors.green,
-          ),
+          child: CircularProgressIndicator(strokeWidth: 4, color: NexoColors.green),
         );
       case NfcPhase.success:
         return Icon(Icons.check_circle, size: 72, color: color);

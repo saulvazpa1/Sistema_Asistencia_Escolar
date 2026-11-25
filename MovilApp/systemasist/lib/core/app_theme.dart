@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
+/// Paleta corporativa NexoEscolar (tomada de los maquetados del proyecto).
 abstract final class NexoColors {
   static const Color navy = Color(0xFF1B365D);
   static const Color navyDark = Color(0xFF14213A);
@@ -30,7 +31,7 @@ ThemeData buildNexoTheme() {
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    scaffoldBackgroundColor: NexoColors.navyDark,
+    scaffoldBackgroundColor: NexoColors.navy,
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: NexoColors.green,
@@ -40,7 +41,6 @@ ThemeData buildNexoTheme() {
         textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
       ),
     ),
-
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: Colors.white,

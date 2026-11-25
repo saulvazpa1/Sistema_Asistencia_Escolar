@@ -1,13 +1,15 @@
 import 'package:app_settings/app_settings.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/app_theme.dart';
 import '../models/nfc_ui_state.dart';
 
+/// Abre la pantalla de ajustes NFC del sistema (Android) o los ajustes de la app (iOS).
 Future<void> openNfcSettings() {
   return AppSettings.openAppSettings(type: AppSettingsType.nfc);
 }
 
+/// Banner interactivo: aparece solo cuando el NFC está apagado o no existe.
 class NfcStatusBanner extends StatelessWidget {
   const NfcStatusBanner({super.key, required this.state});
 
@@ -15,8 +17,8 @@ class NfcStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visible =
-        state.phase == NfcPhase.disabled || state.phase == NfcPhase.unsupported;
+    final visible = state.phase == NfcPhase.disabled ||
+        state.phase == NfcPhase.unsupported;
     if (!visible) return const SizedBox.shrink();
 
     final canActivate = state.phase == NfcPhase.disabled;
@@ -50,10 +52,7 @@ class NfcStatusBanner extends StatelessWidget {
                   if (state.detail != null)
                     Text(
                       state.detail!,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                      ),
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                 ],
               ),
@@ -76,7 +75,7 @@ class NfcStatusBanner extends StatelessWidget {
   }
 }
 
-// --------------- Diálogo flotante que guía al usuario a activar el NFC --------------
+/// Diálogo flotante que guía al usuario a activar el NFC.
 Future<void> showNfcDisabledDialog(BuildContext context) {
   return showDialog<void>(
     context: context,

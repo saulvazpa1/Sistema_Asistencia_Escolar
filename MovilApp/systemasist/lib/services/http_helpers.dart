@@ -14,9 +14,7 @@ Future<http.Response> guardedRequest(
   try {
     return await send().timeout(AppConfig.requestTimeout);
   } on TimeoutException {
-    throw const NetworkException(
-      'La conexión tardó demasiado. Intenta de nuevo.',
-    );
+    throw const NetworkException('La conexión tardó demasiado. Intenta de nuevo.');
   } on HandshakeException {
     throw const NetworkException('No se pudo establecer una conexión segura.');
   } on SocketException {
@@ -43,8 +41,7 @@ ApiException apiErrorFromResponse(
   String fallback = 'Ocurrió un error inesperado.',
 }) {
   final body = decodeJsonObject(response);
-  final serverMessage =
-      (body?['mensaje'] ?? body?['message'] ?? body?['detail']);
+  final serverMessage = (body?['mensaje'] ?? body?['message'] ?? body?['detail']);
   final status = response.statusCode;
   return ApiException(
     serverMessage is String && serverMessage.isNotEmpty

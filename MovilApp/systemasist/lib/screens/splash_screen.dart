@@ -1,9 +1,14 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/app_theme.dart';
 
+/// Splash de marca: logo minimalista de Bot Studios + aviso de copyright.
+///
+/// El logo se dibuja en código (sin assets) y se anima con una sola
+/// [AnimationController]: aparece con escala + fundido, el wordmark sube y
+/// los "ojos" del bot parpadean una vez al final.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -22,17 +27,14 @@ class _SplashScreenState extends State<SplashScreen>
     parent: _controller,
     curve: const Interval(0.0, 0.5, curve: Curves.easeOutBack),
   );
-
   late final Animation<double> _logoFade = CurvedAnimation(
     parent: _controller,
     curve: const Interval(0.0, 0.35, curve: Curves.easeOut),
   );
-
   late final Animation<double> _wordmark = CurvedAnimation(
     parent: _controller,
     curve: const Interval(0.35, 0.75, curve: Curves.easeOutCubic),
   );
-
   late final Animation<double> _footer = CurvedAnimation(
     parent: _controller,
     curve: const Interval(0.6, 1.0, curve: Curves.easeIn),
@@ -45,6 +47,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
+    // Respeta "reducir movimiento" del sistema: muestra el estado final.
     if (MediaQuery.disableAnimationsOf(context)) {
       _controller.value = 1;
     } else {
@@ -58,6 +61,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
+  /// 0 = ojos abiertos, 1 = cerrados. Un parpadeo entre 80 % y 95 % de la animación.
   double _blink(double t) {
     if (t < 0.8 || t > 0.95) return 0;
     return math.sin((t - 0.8) / 0.15 * math.pi);
@@ -149,16 +153,13 @@ class _Wordmark extends StatelessWidget {
       TextSpan(
         children: [
           TextSpan(
-            text: 'BOT',
+            text: 'bot',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
           ),
           TextSpan(text: ' '),
           TextSpan(
-            text: 'STUDIOS',
-            style: TextStyle(
-              color: NexoColors.green,
-              fontWeight: FontWeight.w300,
-            ),
+            text: 'studios',
+            style: TextStyle(color: NexoColors.green, fontWeight: FontWeight.w300),
           ),
         ],
       ),
@@ -167,9 +168,11 @@ class _Wordmark extends StatelessWidget {
   }
 }
 
+/// Marca: cabeza de robot geométrica (contorno redondeado, antena y dos ojos).
 class _BotMarkPainter extends CustomPainter {
   const _BotMarkPainter({required this.blink});
 
+  /// 0 = ojos abiertos, 1 = cerrados.
   final double blink;
 
   @override

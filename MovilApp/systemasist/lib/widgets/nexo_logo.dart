@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/app_theme.dart';
 
+/// Logotipo NexoEscolar: hexágono verde + lápiz y regla cruzados (dibujado en código,
+/// sin assets). Sustituir por `Image.asset` cuando exista el logo oficial vectorial.
 class NexoLogo extends StatelessWidget {
   const NexoLogo({super.key, this.size = 56});
 
@@ -33,11 +35,7 @@ class NexoLogo extends StatelessWidget {
             alignment: const Alignment(0, 0.45),
             child: Transform.rotate(
               angle: -0.75,
-              child: Icon(
-                Icons.straighten,
-                size: size * 0.62,
-                color: Colors.white,
-              ),
+              child: Icon(Icons.straighten, size: size * 0.62, color: Colors.white),
             ),
           ),
         ],

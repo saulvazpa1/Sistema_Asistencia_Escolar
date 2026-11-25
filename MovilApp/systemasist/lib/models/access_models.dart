@@ -1,12 +1,16 @@
+/// Punto de acceso físico (etiqueta NFC fija en la puerta) leído por el teléfono.
 class CheckInPoint {
   const CheckInPoint({required this.pointId, required this.tagUid});
 
+  /// Identificador lógico del punto (registro NDEF de texto/URI, p. ej. "NEXO:PUERTA_PRINCIPAL").
+  /// Si la etiqueta no trae NDEF se usa el UID hexadecimal de la etiqueta.
   final String pointId;
 
+  /// UID hexadecimal de la etiqueta (vacío si el sistema no lo expone).
   final String tagUid;
 }
 
-// --------- Respuesta del backend al registrar un acceso (entrada/salida) ---------
+/// Respuesta del servidor al registrar un acceso.
 class AccessResult {
   const AccessResult({
     required this.ok,
@@ -17,7 +21,7 @@ class AccessResult {
 
   final bool ok;
 
-  // ------- Entrada o salida, según la configuración del punto de acceso. -------
+  /// "entrada" o "salida" (lo determina el servidor según el último movimiento).
   final String tipo;
   final String mensaje;
   final DateTime fechaHora;
@@ -30,8 +34,8 @@ class AccessResult {
       ok: json['ok'] as bool? ?? true,
       tipo: (json['tipo'] as String?) ?? 'entrada',
       mensaje: (json['mensaje'] as String?) ?? 'Acceso registrado',
-      fechaHora:
-          (rawDate is String ? DateTime.tryParse(rawDate) : null)?.toLocal() ??
+      fechaHora: (rawDate is String ? DateTime.tryParse(rawDate) : null)
+              ?.toLocal() ??
           DateTime.now(),
     );
   }

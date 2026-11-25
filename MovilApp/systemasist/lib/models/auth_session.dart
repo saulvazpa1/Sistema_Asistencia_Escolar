@@ -1,17 +1,9 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+
 import 'student.dart';
 
-/// Sesión del alumno: token + UID únicos y los datos de su credencial.
-///
-/// Respuesta esperada del login:
-/// ```json
-/// {
-///   "token": "<token opaco>",
-///   "uid": "<identificador único del alumno>",
-///   "alumno": { "matricula": "...", "nombre_completo": "...", "curp": "...",
-///               "carrera": "...", "grupo": "...", "foto_url": "...",
-///               "credencial_activa": true, "telegram_vinculado": true }
-/// }
-/// ```
 class AuthSession {
   const AuthSession({
     required this.token,
@@ -20,8 +12,12 @@ class AuthSession {
   });
 
   final String token;
+
+  /// ID único de la credencial (`uid`); es lo que viaja por NFC / QR hacia el lector.
   final String uid;
   final Student student;
+
+  String get signingKey => sha256.convert(utf8.encode(token)).toString();
 
   AuthSession copyWith({Student? student}) =>
       AuthSession(token: token, uid: uid, student: student ?? this.student);

@@ -7,23 +7,21 @@ environment:
   sdk: ^3.13.5
 
 dependencies:
+  app_settings: ^9.0.1
+  crypto: ^3.0.8
   flutter:
     sdk: flutter
   
-  image_picker: ^1.1.2
-
-  # ---------- Dependencias NFC --------
-  nfc_manager : ^4.2.1
-  ndef_record: ^1.5.0
-  app_settings: 8.0.3
-
-  # ---- Seguridad / red -------
-  flutter_secure_storage: ^9.2.4
+  flutter_secure_storage: ^11.2.0
   http: ^1.6.0
-  crypto: ^3.0.6
+  image_picker: ^1.2.4
+  material_ui: ^1.1.0
+  ndef_record: ^1.5.0
+  nfc_manager: ^4.4.0
+  qr_flutter: ^4.1.0
+
 
   # ---- UI / diseño -----
-  qr_flutter: ^4.1.0
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

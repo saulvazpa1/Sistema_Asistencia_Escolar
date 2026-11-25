@@ -9,6 +9,12 @@ import '../core/app_config.dart';
 import '../core/app_theme.dart';
 import '../models/auth_session.dart';
 
+/// QR secundario de respaldo (si falla el lector NFC).
+///
+/// El QR NUNCA contiene el token. Lleva un código dinámico firmado:
+///   { "v": 1, "uid": <uid>, "ts": <epoch seg>, "sig": HMAC-SHA256(token, "<uid>.<ts>") }
+/// El servidor, que conoce el token, recalcula la firma y valida que `ts` sea reciente.
+/// Se regenera cada [AppConfig.qrRefreshSeconds] s, así una captura de pantalla caduca.
 Future<void> showQrBackupDialog(BuildContext context, AuthSession session) {
   return showDialog<void>(
     context: context,
@@ -57,7 +63,7 @@ class _QrBackupDialogState extends State<_QrBackupDialog> {
     final message = '${widget.session.uid}.$ts';
     final signature = Hmac(
       sha256,
-      utf8.encode(widget.session.token),
+      utf8.encode(widget.session.signingKey),
     ).convert(utf8.encode(message)).toString();
     return jsonEncode({
       'v': 1,

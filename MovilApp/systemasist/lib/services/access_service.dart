@@ -9,14 +9,27 @@ import '../models/access_models.dart';
 import '../models/auth_session.dart';
 import 'http_helpers.dart';
 
+/// Registro de acceso (entrada/salida) contra el backend.
+///
+/// Endpoint: POST {API_BASE_URL}/accesos
+///   headers: Authorization: Bearer <token>
+///   body:    { "uid", "punto_id", "tag_uid", "fecha_hora" (UTC ISO-8601), "plataforma" }
+///   200/201: { "ok": true, "tipo": "entrada"|"salida", "mensaje": "...", "fecha_hora": "..." }
+///   401:     token inválido/expirado -> [SessionExpiredException]
+///   4xx:     rechazo de negocio (credencial inactiva, punto inválido...) -> no reintentable
+///   5xx:     reintentable
 class AccessService {
   AccessService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
 
+  // Solo para el modo simulación: alterna entrada / salida.
   static bool _mockNextIsEntry = true;
 
-  Future<AccessResult> registerAccess(AuthSession session, CheckInPoint point) {
+  Future<AccessResult> registerAccess(
+    AuthSession session,
+    CheckInPoint point,
+  ) {
     return AppConfig.useMock
         ? _mockRegister(point)
         : _remoteRegister(session, point);
@@ -29,9 +42,12 @@ class AccessService {
     final response = await guardedRequest(
       () => _client.post(
         Uri.parse('${AppConfig.baseUrl}/accesos'),
-        headers: {...jsonHeaders, 'Authorization': 'Bearer ${session.token}'},
+        headers: {
+          ...jsonHeaders,
+          'Authorization': 'Bearer ${session.token}',
+        },
         body: jsonEncode({
-          'alumno_uid': session.uid,
+          'uid': session.uid,
           'punto_id': point.pointId,
           'tag_uid': point.tagUid,
           'fecha_hora': DateTime.now().toUtc().toIso8601String(),

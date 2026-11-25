@@ -1,20 +1,21 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../core/app_theme.dart';
 import '../models/nfc_ui_state.dart';
 import '../models/student.dart';
 
+/// Modal "Propiedades": estado de credencial, vinculación con Telegram, NFC y cierre de sesión.
 Future<void> showPropertiesDialog(
   BuildContext context, {
   required Student student,
+  required String credentialId,
   required NfcUiState nfcState,
   required Future<void> Function() onLogout,
 }) {
   return showDialog<void>(
     context: context,
     builder: (dialogContext) {
-      final nfcOk =
-          nfcState.phase != NfcPhase.disabled &&
+      final nfcOk = nfcState.phase != NfcPhase.disabled &&
           nfcState.phase != NfcPhase.unsupported;
 
       return Dialog(
@@ -37,20 +38,22 @@ Future<void> showPropertiesDialog(
               ),
               const SizedBox(height: 20),
               _Property(
+                label: 'ID de credencial:',
+                value: credentialId,
+              ),
+              _Property(
                 label: 'Estado de credencial:',
                 value: student.credencialActiva ? 'Activa' : 'Inactiva',
-                valueColor: student.credencialActiva
-                    ? Colors.white
-                    : NexoColors.errorText,
+                valueColor:
+                    student.credencialActiva ? Colors.white : NexoColors.errorText,
               ),
               _Property(
                 label: 'Estatus de la Vinculación con Telegram:',
                 value: student.telegramVinculado
                     ? 'Vinculado correctamente'
                     : 'Sin vincular. Pide a tu tutor completar el registro.',
-                valueColor: student.telegramVinculado
-                    ? Colors.white
-                    : NexoColors.warning,
+                valueColor:
+                    student.telegramVinculado ? Colors.white : NexoColors.warning,
               ),
               _Property(
                 label: 'NFC del dispositivo:',
@@ -79,7 +82,7 @@ Future<void> showPropertiesDialog(
   );
 }
 
-// -------------- Confirmación previa al cierre de sesión ----------
+/// Confirmación previa al cierre de sesión (borra token y UID del dispositivo).
 Future<bool?> showLogoutConfirmDialog(BuildContext context) {
   return showDialog<bool>(
     context: context,

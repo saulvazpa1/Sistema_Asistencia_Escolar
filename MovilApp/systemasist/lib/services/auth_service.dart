@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:http/http.dart' as http;
 
@@ -60,6 +59,20 @@ class AuthService {
     }
   }
 
+  Future<bool> credentialIsActive(AuthSession session) async {
+    if (AppConfig.useMock) return true;
+
+    final response = await guardedRequest(
+      () => _client.get(
+        Uri.parse('${AppConfig.baseUrl}/credencial/estado'),
+        headers: {...jsonHeaders, 'Authorization': 'Bearer ${session.token}'},
+      ),
+    );
+    if (response.statusCode == 401) throw const SessionExpiredException();
+    if (response.statusCode != 200) throw apiErrorFromResponse(response);
+    return decodeJsonObject(response)?['activa'] as bool? ?? true;
+  }
+
   /// Simulación para desarrollo: matrícula `20258TTH89` / contraseña `nexo1234`.
   Future<AuthSession> _mockLogin(String matricula, String password) async {
     await Future<void>.delayed(const Duration(milliseconds: 800));
@@ -71,13 +84,8 @@ class AuthService {
       );
     }
 
-    final random = Random.secure();
-    final token = base64UrlEncode(
-      List<int>.generate(32, (_) => random.nextInt(256)),
-    );
-
     return AuthSession(
-      token: token,
+      token: 'mock-token-20258TTH89',
       uid: 'uid-20258TTH89',
       student: Student(
         matricula: '20258TTH89',
