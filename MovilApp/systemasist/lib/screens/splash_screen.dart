@@ -4,11 +4,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/app_theme.dart';
 
-/// Splash de marca: logo minimalista de Bot Studios + aviso de copyright.
-///
-/// El logo se dibuja en código (sin assets) y se anima con una sola
-/// [AnimationController]: aparece con escala + fundido, el wordmark sube y
-/// los "ojos" del bot parpadean una vez al final.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -61,7 +56,6 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
-  /// 0 = ojos abiertos, 1 = cerrados. Un parpadeo entre 80 % y 95 % de la animación.
   double _blink(double t) {
     if (t < 0.8 || t > 0.95) return 0;
     return math.sin((t - 0.8) / 0.15 * math.pi);
@@ -143,7 +137,6 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-/// "bot studios": minúsculas, "bot" en peso fuerte y "studios" ligero en verde.
 class _Wordmark extends StatelessWidget {
   const _Wordmark();
 
@@ -159,7 +152,10 @@ class _Wordmark extends StatelessWidget {
           TextSpan(text: ' '),
           TextSpan(
             text: 'studios',
-            style: TextStyle(color: NexoColors.green, fontWeight: FontWeight.w300),
+            style: TextStyle(
+              color: Color.fromARGB(255, 0, 0, 0),
+              fontWeight: FontWeight.w300,
+            ),
           ),
         ],
       ),
@@ -168,7 +164,6 @@ class _Wordmark extends StatelessWidget {
   }
 }
 
-/// Marca: cabeza de robot geométrica (contorno redondeado, antena y dos ojos).
 class _BotMarkPainter extends CustomPainter {
   const _BotMarkPainter({required this.blink});
 
@@ -181,11 +176,11 @@ class _BotMarkPainter extends CustomPainter {
     final stroke = s * 0.07;
 
     final line = Paint()
-      ..color = NexoColors.green
+      ..color = const Color.fromARGB(255, 0, 0, 0)
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round;
-    final fill = Paint()..color = NexoColors.green;
+    final fill = Paint()..color = const Color.fromARGB(255, 0, 0, 0);
     final white = Paint()..color = Colors.white;
 
     // Cabeza
